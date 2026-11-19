@@ -1,3 +1,5 @@
+
+```markdown
 GhalamStudent/
 ├── app/
 │   ├── src/
@@ -36,6 +38,8 @@ GhalamStudent/
 ├── gradle.properties
 ├── local.properties
 └── settings.gradle.kts
+
+```
 
 
 # تکالیف (GhalamTasks)
