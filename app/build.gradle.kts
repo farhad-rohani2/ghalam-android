@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.ghalam"
-        minSdk = 24
+        minSdk = 29
         targetSdk = 35
         versionCode = 2
         versionName = "1.1"

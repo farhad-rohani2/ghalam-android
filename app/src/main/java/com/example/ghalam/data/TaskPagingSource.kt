@@ -5,18 +5,13 @@ import androidx.paging.PagingState
 
 class TaskPagingSource(
     private val api: GhalamApi,
-    private val lessonIds: List<Int>,
-    private val onlyWithDeadline: Boolean,
+    private val filters: Map<String, String>,
 ) : PagingSource<Int, Task>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Task> {
         val page = params.key ?: 1
         return try {
-            val res = api.tasks(
-                page = page,
-                lessonIds = lessonIds.ifEmpty { null },
-                deadlineUnfinished = if (onlyWithDeadline) "ok" else null,
-            )
+            val res = api.tasks(page = page, filters = filters)
             LoadResult.Page(
                 data = res.data,
                 prevKey = if (page > 1) page - 1 else null,

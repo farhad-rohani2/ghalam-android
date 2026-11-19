@@ -11,6 +11,11 @@ import kotlinx.serialization.json.intOrNull
 
 // The detail payload is irregular (PHP turns empty objects into []), so everything
 // below the top level is kept as raw JSON and mapped by hand, defensively.
+//
+// Only what the TEACHER enters in TeacherTaskResource is mapped for the student:
+//   lesson, classroom, deadline, description (title), dependencies,
+//   expected_answer, attached files, fileInInternet links.
+// Everything else in the payload (ids, rating, updated_at, exam title, images) is ignored.
 
 @Serializable
 data class TaskDetailResponse(val data: TaskDetail)
@@ -24,32 +29,50 @@ data class TaskDetail(
     val classroom: JsonElement? = null,
     val lesson: JsonElement? = null,
     val exam: JsonElement? = null,
+    val dependencies: JsonElement? = null,
     val url: String = "",
 )
 
 // ---------- UI models ----------
 
+private val IMAGE_EXT = listOf(".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".heic")
+
 data class RemoteFile(val url: String, val name: String, val uuid: String?) {
-    /** Images are served from /storage and the site appends ?pageId. */
-    val imageUrl: String get() = if ('?' in url) url else "$url?pageId=$PAGE_TASK"
+    /** Files are served from /storage and the site appends ?pageId. */
+    val fullUrl: String get() = if ('?' in url) url else "$url?pageId=$PAGE_TASK"
+    val isImage: Boolean
+        get() = name.lowercase().let { n -> IMAGE_EXT.any { n.endsWith(it) } } ||
+            url.substringBefore('?').lowercase().let { n -> IMAGE_EXT.any { n.endsWith(it) } }
 }
+
+/** A "file from the internet" link the teacher added (page the file came from). */
+data class LinkItem(val title: String, val url: String)
+
+/** A prerequisite task. */
+data class DepItem(val title: String, val uuid: String?)
 
 /** What is needed to upload into a question's answer. */
 data class AnswerSlot(val answerId: Int, val fieldUuid: String)
 
 data class QuestionUi(
     val id: Int,
-    val prompt: String,
     val slot: AnswerSlot?,
+    /** student's own uploaded photos */
     val files: List<RemoteFile>,
+    /** teacher: "توضیح / پاسخ مورد انتظار" (HTML from the rich editor) */
+    val expectedHtml: String,
+    /** teacher: attached files */
+    val teacherFiles: List<RemoteFile>,
+    /** teacher: links */
+    val links: List<LinkItem>,
 )
 
 data class DetailUi(
     val title: String,
-    val description: String,
     val lesson: String,
     val classroom: String,
     val deadline: String?,
+    val dependencies: List<DepItem>,
     val questions: List<QuestionUi>,
 )
 
@@ -63,24 +86,46 @@ fun TaskDetail.toUi(): DetailUi {
     val questions = (examObj?.get("questions") as? JsonArray).orEmpty()
         .mapNotNull { (it as? JsonObject)?.toQuestionUi() }
     return DetailUi(
-        title = examObj?.get("title").str()?.trim().orEmpty().ifEmpty { description.trim() },
-        description = description.trim(),
+        title = description.trim().ifEmpty { examObj?.get("title").str()?.trim().orEmpty() },
         lesson = (lesson as? JsonObject)?.get("title").str().orEmpty(),
         classroom = (classroom as? JsonObject)?.get("title").str().orEmpty(),
-        deadline = deadlineAt,
+        deadline = deadlineAt?.takeIf { it.isNotBlank() },
+        dependencies = (dependencies as? JsonArray).orEmpty().mapNotNull { parseDependency(it) },
         questions = questions,
     )
 }
 
-private fun JsonObject.toQuestionUi(): QuestionUi {
-    val prompt = (get("question") as? JsonArray).orEmpty()
-        .mapNotNull { (it as? JsonObject)?.get("data") as? JsonObject }
-        .flatMap { d -> listOfNotNull(d["title"].str(), d["text"].str(), d["body"].str()) }
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .distinct()
-        .joinToString("\n")
+private fun parseDependency(el: JsonElement): DepItem? = when (el) {
+    is JsonObject -> {
+        val title = listOf("description", "title", "exam").firstNotNullOfOrNull { el[it].str()?.trim()?.ifEmpty { null } }
+        val uuid = el["uuid"].str() ?: el["url"].str()?.substringBefore('?')?.trimEnd('/')?.substringAfterLast('/')
+        title?.let { DepItem(it, uuid) }
+    }
+    is JsonPrimitive -> el.contentOrNull?.takeIf { it.isNotBlank() }?.let { DepItem(it, null) }
+    else -> null
+}
 
+private fun JsonObject.toQuestionUi(): QuestionUi {
+    // ----- teacher part: question[] -> first block with data -----
+    var expected = ""
+    val teacherFiles = mutableListOf<RemoteFile>()
+    val links = mutableListOf<LinkItem>()
+    for (block in (get("question") as? JsonArray).orEmpty()) {
+        val data = (block as? JsonObject)?.get("data") as? JsonObject ?: continue
+        if (expected.isEmpty()) expected = data["expected_answer"].str().orEmpty()
+
+        val file = data["file"] as? JsonObject
+        val media = ((file?.get("extraData") as? JsonObject)?.get("mediaResource") as? JsonArray).orEmpty()
+        media.forEach { parseMedia(it)?.let(teacherFiles::add) }
+
+        (data["fileInInternet"] as? JsonArray).orEmpty().forEach { l ->
+            val o = l as? JsonObject ?: return@forEach
+            val page = o["linkPage"].str()?.trim().orEmpty()
+            if (page.isNotEmpty()) links += LinkItem(page.removePrefix("https://").removePrefix("http://").trimEnd('/'), page)
+        }
+    }
+
+    // ----- student part: answer -----
     val answer = get("answer") as? JsonObject // may be [] / null when there is no answer record
     val answerId = answer?.get("id").int()
 
@@ -94,7 +139,7 @@ private fun JsonObject.toQuestionUi(): QuestionUi {
         val media = ((file["extraData"] as? JsonObject)?.get("mediaResource") as? JsonArray).orEmpty()
         media.forEach { parseMedia(it)?.let(files::add) }
     }
-    return QuestionUi(get("id").int() ?: 0, prompt, slot, files)
+    return QuestionUi(get("id").int() ?: 0, slot, files, expected, teacherFiles, links)
 }
 
 /** Works for both mediaResource[] items and the upload response's "data". */

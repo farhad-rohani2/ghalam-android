@@ -20,7 +20,8 @@ import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
-
+import retrofit2.http.QueryMap
+import kotlinx.serialization.json.JsonPrimitive
 // pageId values used by the site for the different screens
 const val PAGE_LIST = 61
 const val PAGE_LOGIN = 62
@@ -93,28 +94,54 @@ data class Meta(
 @Serializable
 data class FiltersResponse(val filters: List<Filter>)
 
+/** How a filter behaves in the UI (mirrors the site's Filter.vue component types). */
+enum class FilterKind { SINGLE, MULTI, UNSUPPORTED }
+
 @Serializable
 data class Filter(
     val key: String,
-    val name: String,
-    val type: String,
+    val name: String = "",
+    val type: String = "",
     // options can be a JSON object ({"0":{...}}) or an array, so keep it raw
     val options: JsonElement? = null,
+    @SerialName("filter_settings") val filterSettings: JsonElement? = null,
 ) {
+    /** Same rule as Filter.vue: filter_settings[0].type wins over type. */
+    val effectiveType: String
+        get() {
+            val first = (filterSettings as? JsonArray)?.firstOrNull() as? JsonObject
+            return (first?.get("type") as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() } ?: type
+        }
+
+    val kind: FilterKind
+        get() = when (effectiveType) {
+            "Select", "Radio", "TagInline" -> FilterKind.SINGLE
+            "Checkbox", "Multiselect", "Tags", "TagsInline" -> FilterKind.MULTI
+            // Range / Colors / free text are not supported in the app
+            "Range", "Float", "Colors" -> FilterKind.UNSUPPORTED
+            else -> if (parsedOptions().isNotEmpty()) FilterKind.SINGLE else FilterKind.UNSUPPORTED
+        }
+
     fun parsedOptions(): List<FilterOption> {
         val el = options ?: return emptyList()
-        val items = when (el) {
+        val items: Collection<JsonElement> = when (el) {
             is JsonObject -> el.values
-            else -> el.jsonArray
+            is JsonArray -> el
+            else -> return emptyList()
         }
-        return items.map {
-            val o = it.jsonObject
-            FilterOption(
-                id = o["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                label = o["label"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-            )
+        return items.mapNotNull { item ->
+            when (item) {
+                is JsonObject -> {
+                    val id = item["id"].text() ?: item["value"].text() ?: return@mapNotNull null
+                    FilterOption(id, item["label"].text() ?: item["name"].text() ?: id)
+                }
+                is JsonPrimitive -> item.contentOrNull?.let { FilterOption(it, it) }
+                else -> null
+            }
         }
     }
+
+    private fun JsonElement?.text(): String? = (this as? JsonPrimitive)?.contentOrNull
 }
 
 data class FilterOption(val id: String, val label: String)
@@ -135,19 +162,16 @@ interface GhalamApi {
     suspend fun filtersMeta(@Body body: PageBody = PageBody()): FiltersResponse
 
     /**
-     * Task list.
-     * deadlineUnfinished: "ok" (has deadline) / "no"
-     * hasMedia: "complete" / "withoutAnswer" / "atLeastAnWithoutAnswer"
+     * Task list. [filters] keys are already in the site's format, e.g.
+     *   filter[title]=...           filter[has_media]=complete
+     *   filter[lesson_id][0]=3      filter[lesson_id][1]=5
      */
     @POST("api/blueberry/sections/task")
     suspend fun tasks(
         @Query("page") page: Int = 1,
         @Query("sort") sort: String = "-id",
         @Query("view") view: String = "grid",
-        @Query("filter[lesson_id][]") lessonIds: List<Int>? = null,
-        @Query("filter[title]") title: String? = null,
-        @Query("filter[deadline_unfinished]") deadlineUnfinished: String? = null,
-        @Query("filter[has_media]") hasMedia: String? = null,
+        @QueryMap filters: Map<String, String> = emptyMap(),
         @Body body: BlockBody = BlockBody(),
     ): TaskResponse
 

@@ -1,11 +1,13 @@
 package com.example.ghalam
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -22,12 +24,15 @@ import com.example.ghalam.ui.LoginScreen
 import com.example.ghalam.ui.TaskDetailScreen
 import com.example.ghalam.ui.TaskListScreen
 import com.example.ghalam.ui.TasksViewModel
+import com.example.ghalam.ui.theme.GhalamTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // every screen starts with a coloured header -> light status-bar icons
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         setContent {
-            MaterialTheme {
+            GhalamTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     App()
                 }
@@ -45,6 +50,7 @@ fun App(vm: TasksViewModel = viewModel()) {
     val tasks = vm.tasks.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     var openUuid by rememberSaveable { mutableStateOf<String?>(null) }
+    var openFinished by rememberSaveable { mutableStateOf<Boolean?>(null) }
 
     LaunchedEffect(token) { if (token.isNullOrBlank()) openUuid = null }
 
@@ -58,9 +64,17 @@ fun App(vm: TasksViewModel = viewModel()) {
 
         open != null -> {
             BackHandler { openUuid = null }
-            TaskDetailScreen(uuid = open, onBack = { openUuid = null })
+            TaskDetailScreen(
+                uuid = open,
+                finishedHint = openFinished,
+                onBack = { openUuid = null },
+                onOpenTask = { openUuid = it; openFinished = null }, // prerequisite task
+            )
         }
 
-        else -> TaskListScreen(vm, tasks, listState, onOpen = { openUuid = it })
+        else -> TaskListScreen(vm, tasks, listState, onOpen = { id, finished ->
+            openFinished = finished
+            openUuid = id
+        })
     }
 }

@@ -1,46 +1,98 @@
-# ---- Android / Gradle build ----
-# پوشه‌های build (هم ریشه، هم ماژول‌ها)
-/build/
-/app/build/
-**/build/
+# ---- Gradle ----
 .gradle/
-/app/.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
 
-# خروجی‌های APK / AAB
+# ---- Android Studio / IntelliJ ----
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# ---- Local configuration ----
+local.properties
+local.properties.*
+sdk.dir=
+
+# ---- Signing / secrets ----
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+!debug.keystore
+
+# ---- Build outputs ----
 *.apk
 *.aab
 *.ap_
+*.aar
 *.dex
 *.class
-/app/outputs/
-/app/build/outputs/
-
-# فایل‌های تولیدشده‌ی Gradle
-*.iml
-.gradle
-/local.properties
-/captures
-.externalNativeBuild
-.cxx
 *.hprof
+/app/outputs/
+/app/build/
+/app/release/
 
-# ---- Kotlin / Java ----
-# پوشه‌ی kotlin-classes و tmp
-/app/build/tmp/
-**/kotlin-classes/
+# ---- Native / NDK ----
+.externalNativeBuild/
+.cxx/
+obj/
+libs/
+*.so
+!**/src/main/jniLibs/**/*.so
+
+# ---- Kotlin ----
 *.kotlin_module
+/kotlin-classes/
+/app/build/tmp/kotlin-classes/
 
-# ---- IDE ----
-.idea/
-*.iws
-*.iml
-*.ipr
-.vscode/
-
-# ---- سیستم‌عامل ----
-.DS_Store
-Thumbs.db
-
-# ---- Logs / گزارش‌ها ----
+# ---- Generated / cache ----
+/captures/
 *.log
 /app/build/logs/
+/app/build/intermediates/
+/app/build/generated/
+/app/build/merged_res/
+/app/build/merged_manifests/
+/app/build/merged_java_res/
+/app/build/merged_native_libs/
+/app/build/tmp/
+/app/build/kotlin/
+/app/build/desugar_graph/
+/app/build/tmp/kotlin-classes/
+/app/build/outputs/logs/
+/app/build/intermediates/incremental/
+
+# ---- Test / coverage ----
+/app/build/reports/
+/app/build/test-results/
+/app/build/outputs/code-coverage/
+coverage/
+*.exec
+
+# ---- IDE (VSCode, etc.) ----
+.vscode/
+*.code-workspace
+.fleet/
+
+# ---- OS ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ---- Misc ----
+*.pid
+*.seed
+*.pid.lock
+npm-debug.log*
+yarn-error.log*
