@@ -1,3 +1,43 @@
+GhalamStudent/
+├── app/
+│   ├── src/
+│   │   └── main/
+│   │       ├── java/
+│   │       │   └── com/
+│   │       │       └── example/
+│   │       │           └── ghalam/
+│   │       │               ├── data/
+│   │       │               │   ├── GhalamApi.kt
+│   │       │               │   ├── Graph.kt
+│   │       │               │   ├── TaskDetail.kt
+│   │       │               │   ├── TaskPagingSource.kt
+│   │       │               │   └── TokenStore.kt
+│   │       │               ├── ui/
+│   │       │               │   ├── DetailViewModel.kt
+│   │       │               │   ├── LoginScreen.kt
+│   │       │               │   ├── TaskDetailScreen.kt
+│   │       │               │   ├── TaskListScreen.kt
+│   │       │               │   └── TasksViewModel.kt
+│   │       │               ├── util/
+│   │       │               │   ├── Errors.kt
+│   │       │               │   └── ImageUtil.kt
+│   │       │               ├── GhalamApp.kt
+│   │       │               └── MainActivity.kt
+│   │       ├── res/
+│   │       │   └── xml/
+│   │       │       └── file_paths.xml
+│   │       └── AndroidManifest.xml
+│   └── build.gradle.kts
+├── gradle/
+│   └── wrapper/
+│       └── gradle-wrapper.properties
+├── README.md
+├── build.gradle.kts
+├── gradle.properties
+├── local.properties
+└── settings.gradle.kts
+
+
 # تکالیف (GhalamTasks)
 
 1. پوشه را در Android Studio (Koala یا جدیدتر) باز کنید و Gradle Sync بزنید.
