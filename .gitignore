@@ -1,0 +1,46 @@
+# ---- Android / Gradle build ----
+# پوشه‌های build (هم ریشه، هم ماژول‌ها)
+/build/
+/app/build/
+**/build/
+.gradle/
+/app/.gradle/
+
+# خروجی‌های APK / AAB
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+/app/outputs/
+/app/build/outputs/
+
+# فایل‌های تولیدشده‌ی Gradle
+*.iml
+.gradle
+/local.properties
+/captures
+.externalNativeBuild
+.cxx
+*.hprof
+
+# ---- Kotlin / Java ----
+# پوشه‌ی kotlin-classes و tmp
+/app/build/tmp/
+**/kotlin-classes/
+*.kotlin_module
+
+# ---- IDE ----
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+
+# ---- سیستم‌عامل ----
+.DS_Store
+Thumbs.db
+
+# ---- Logs / گزارش‌ها ----
+*.log
+/app/build/logs/
