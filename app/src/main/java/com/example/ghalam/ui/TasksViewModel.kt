@@ -2,8 +2,6 @@ package com.example.ghalam.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.ghalam.data.Filter
@@ -11,7 +9,6 @@ import com.example.ghalam.data.FilterKind
 import com.example.ghalam.data.Graph
 import com.example.ghalam.data.LoginBody
 import com.example.ghalam.data.Task
-import com.example.ghalam.data.TaskPagingSource
 import com.example.ghalam.util.toAsciiDigits
 import com.example.ghalam.util.userMessage
 import kotlinx.coroutines.CancellationException
@@ -65,21 +62,21 @@ class TasksViewModel : ViewModel() {
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** List identity: token + query params. The token makes every new login start a fresh pager. */
+    private data class ListKey(val token: String, val params: Map<String, String>)
+
+    /** Offline-first: Room is the source, the network only refreshes it (see TaskRemoteMediator). */
     val tasks: Flow<PagingData<Task>> =
         combine(
             Graph.token,
             filters,
             selected,
             query.debounce { if (it.isEmpty()) 0L else 500L },
-        ) { t, fs, sel, q -> if (t.isNullOrBlank()) null else buildParams(fs, sel, q) }
+        ) { t, fs, sel, q -> if (t.isNullOrBlank()) null else ListKey(t, buildParams(fs, sel, q)) }
             .filter { it != null }
             .map { it!! }
             .distinctUntilChanged()
-            .flatMapLatest { params ->
-                Pager(PagingConfig(pageSize = 6, enablePlaceholders = false)) {
-                    TaskPagingSource(api, params)
-                }.flow
-            }
+            .flatMapLatest { key -> Graph.repo.tasks(key.params) }
             .cachedIn(viewModelScope)
 
     init {
@@ -131,7 +128,7 @@ class TasksViewModel : ViewModel() {
 
     private fun loadFilters() {
         viewModelScope.launch {
-            runCatching { api.filtersMeta() }.onSuccess { res ->
+            runCatching { Graph.repo.filtersMeta() }.onSuccess { res ->
                 filters.value = res.filters.filter { it.kind != FilterKind.UNSUPPORTED }
             }
         }

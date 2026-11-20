@@ -30,6 +30,8 @@ data class DetailState(
     val loading: Boolean = true,
     val error: String? = null,
     val detail: DetailUi? = null,
+    /** true while the visible detail comes from the local cache (network failed / still loading). */
+    val fromCache: Boolean = false,
     val uploading: Int = 0,
     val deleting: Set<String> = emptySet(),
     val message: String? = null,
@@ -44,16 +46,35 @@ class DetailViewModel(private val uuid: String) : ViewModel() {
         load()
     }
 
+    /** Cache first (instant, works offline), then the network replaces it. */
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
+
+            if (_state.value.detail == null) {
+                val cached = try {
+                    Graph.repo.cachedDetail(uuid)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
+                if (cached != null) _state.update { it.copy(detail = cached.toUi(), fromCache = true) }
+            }
+
             try {
-                val res = Graph.api.taskDetail(uuid)
-                _state.update { it.copy(loading = false, detail = res.data.toUi()) }
+                val fresh = Graph.repo.fetchDetail(uuid)
+                _state.update { it.copy(loading = false, detail = fresh.toUi(), fromCache = false) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.update { it.copy(loading = false, error = e.userMessage()) }
+                _state.update {
+                    if (it.detail != null) {
+                        it.copy(loading = false, message = "اتصال برقرار نشد؛ نسخه‌ی ذخیره‌شده نمایش داده می‌شود")
+                    } else {
+                        it.copy(loading = false, error = e.userMessage())
+                    }
+                }
             }
         }
     }
@@ -69,6 +90,7 @@ class DetailViewModel(private val uuid: String) : ViewModel() {
         }
         viewModelScope.launch {
             var failed = 0
+            var succeeded = 0
             for (uri in uris) {
                 _state.update { it.copy(uploading = it.uploading + 1) }
                 try {
@@ -85,6 +107,7 @@ class DetailViewModel(private val uuid: String) : ViewModel() {
                     )
                     val file = parseMedia(res["data"]) ?: error("پاسخ ارسال نامعتبر بود")
                     updateFiles(questionId) { it + file }
+                    succeeded++
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -95,6 +118,8 @@ class DetailViewModel(private val uuid: String) : ViewModel() {
                 }
             }
             if (failed == 0) _state.update { it.copy(message = "ارسال شد") }
+            // keep the offline copy in sync with what is now on the server
+            if (succeeded > 0) Graph.repo.refreshDetailQuietly(uuid)
         }
     }
 
@@ -106,6 +131,7 @@ class DetailViewModel(private val uuid: String) : ViewModel() {
                 Graph.api.removeMedia(id, PageBody(PAGE_TASK)).close()
                 updateFiles(questionId) { list -> list.filterNot { it.uuid == id } }
                 _state.update { it.copy(message = "حذف شد") }
+                Graph.repo.refreshDetailQuietly(uuid)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

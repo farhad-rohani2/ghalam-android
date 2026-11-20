@@ -1,0 +1,18 @@
+Room offline cache - copy the files over the project (same paths).
+
+NEW:
+  app/src/main/java/com/example/ghalam/data/LocalDb.kt
+  app/src/main/java/com/example/ghalam/data/TaskRemoteMediator.kt
+  app/src/main/java/com/example/ghalam/data/TaskRepository.kt
+  app/src/main/java/com/example/ghalam/ui/OfflineBanner.kt
+
+REPLACE:
+  build.gradle.kts            (ROOT, next to settings.gradle.kts)
+  app/build.gradle.kts
+  app/src/main/java/com/example/ghalam/data/Graph.kt
+  app/src/main/java/com/example/ghalam/ui/DetailViewModel.kt
+  app/src/main/java/com/example/ghalam/ui/TasksViewModel.kt    (list + filters via Graph.repo)
+  app/src/main/java/com/example/ghalam/ui/TaskListScreen.kt    (offline banner)
+  app/src/main/java/com/example/ghalam/ui/TaskDetailScreen.kt  (one added line: offline banner)
+
+TaskPagingSource.kt is no longer used (can be deleted).

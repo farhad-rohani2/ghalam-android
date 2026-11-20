@@ -170,6 +170,7 @@ fun TaskDetailScreen(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     item { Hero(detail, finished, onBack, onRefresh = vm::load) }
+                    if (state.fromCache) item { OfflineBanner() }
 
                     if (detail.dependencies.isNotEmpty()) {
                         item {

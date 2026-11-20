@@ -168,6 +168,14 @@ fun TaskListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
+                    if (refresh is LoadState.Error) {
+                        item(key = "offline-banner") {
+                            OfflineBanner(
+                                text = "📴 اتصال برقرار نیست؛ لیست ذخیره‌شده نمایش داده می‌شود.",
+                                horizontalPadding = 0.dp,
+                            )
+                        }
+                    }
                     items(count = tasks.itemCount, key = tasks.itemKey { it.id }) { i ->
                         tasks[i]?.let { t -> TaskCard(t) { onOpen(t.uuid, t.deadlineFinished) } }
                     }
