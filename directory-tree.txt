@@ -1,46 +1,4 @@
 GhalamStudent/
-├── _app_backup/
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/
-│   │       │   └── com/
-│   │       │       └── example/
-│   │       │           └── ghalam/
-│   │       │               ├── data/
-│   │       │               │   ├── GhalamApi.kt
-│   │       │               │   ├── Graph.kt
-│   │       │               │   ├── LocalDb.kt
-│   │       │               │   ├── TaskDetail.kt
-│   │       │               │   ├── TaskPagingSource.kt
-│   │       │               │   ├── TaskRemoteMediator.kt
-│   │       │               │   ├── TaskRepository.kt
-│   │       │               │   └── TokenStore.kt
-│   │       │               ├── ui/
-│   │       │               │   ├── theme/
-│   │       │               │   │   └── Theme.kt
-│   │       │               │   ├── Components.kt
-│   │       │               │   ├── DetailViewModel.kt
-│   │       │               │   ├── LoginScreen.kt
-│   │       │               │   ├── OfflineBanner.kt
-│   │       │               │   ├── TaskDetailScreen.kt
-│   │       │               │   ├── TaskListScreen.kt
-│   │       │               │   └── TasksViewModel.kt
-│   │       │               ├── util/
-│   │       │               │   ├── Downloads.kt
-│   │       │               │   ├── Errors.kt
-│   │       │               │   └── ImageUtil.kt
-│   │       │               ├── GhalamApp.kt
-│   │       │               └── MainActivity.kt
-│   │       ├── res/
-│   │       │   ├── font/
-│   │       │   │   ├── vazirmatn_bold.ttf
-│   │       │   │   ├── vazirmatn_medium.ttf
-│   │       │   │   ├── vazirmatn_regular.ttf
-│   │       │   │   └── vazirmatn_semibold.ttf
-│   │       │   └── xml/
-│   │       │       └── file_paths.xml
-│   │       └── AndroidManifest.xml
-│   └── build.gradle.kts
 ├── core/
 │   ├── network/
 │   │   ├── src/
@@ -96,9 +54,6 @@ GhalamStudent/
 ├── gradle/
 │   └── wrapper/
 │       └── gradle-wrapper.properties
-├── scripts/
-│   ├── step1-copy-fonts.sh
-│   └── step2-move-app-to-student.sh
 ├── student/
 │   ├── src/
 │   │   └── main/
@@ -141,6 +96,16 @@ GhalamStudent/
 │   │       │               ├── GhalamApp.kt
 │   │       │               └── MainActivity.kt
 │   │       ├── res/
+│   │       │   ├── drawable/
+│   │       │   │   └── ic_launcher_background.xml
+│   │       │   ├── drawable-nodpi/
+│   │       │   │   ├── ic_launcher_art.png
+│   │       │   │   └── ic_launcher_monochrome.png
+│   │       │   ├── mipmap-anydpi-v26/
+│   │       │   │   ├── ic_launcher.xml
+│   │       │   │   └── ic_launcher_round.xml
+│   │       │   ├── values/
+│   │       │   │   └── strings.xml
 │   │       │   └── xml/
 │   │       │       └── file_paths.xml
 │   │       └── AndroidManifest.xml
@@ -170,7 +135,9 @@ GhalamStudent/
 │   │       │                   └── TeacherApp.kt
 │   │       └── AndroidManifest.xml
 │   └── build.gradle.kts
+├── CHANGELOG.md
 ├── CHANGES.txt
+├── Luxurious Golden Arabic Calligraphy Emblem.png
 ├── README.md
 ├── build.gradle.kts
 ├── directory-tree.txt
