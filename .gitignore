@@ -96,3 +96,6 @@ Desktop.ini
 *.pid.lock
 npm-debug.log*
 yarn-error.log*
+
+# ----password ----
+password-android-ghalam/
