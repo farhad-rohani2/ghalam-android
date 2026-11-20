@@ -20,4 +20,7 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "GhalamTasks"
-include(":app")
+include(":core:network")
+include(":core:ui")
+include(":student")
+include(":teacher")

@@ -1,5 +1,5 @@
 GhalamStudent/
-├── app/
+├── _app_backup/
 │   ├── src/
 │   │   └── main/
 │   │       ├── java/
@@ -41,9 +41,135 @@ GhalamStudent/
 │   │       │       └── file_paths.xml
 │   │       └── AndroidManifest.xml
 │   └── build.gradle.kts
+├── core/
+│   ├── network/
+│   │   ├── src/
+│   │   │   └── main/
+│   │   │       ├── java/
+│   │   │       │   └── com/
+│   │   │       │       └── example/
+│   │   │       │           └── ghalam/
+│   │   │       │               └── core/
+│   │   │       │                   └── network/
+│   │   │       │                       ├── data/
+│   │   │       │                       │   ├── api/
+│   │   │       │                       │   │   ├── ApiClient.kt
+│   │   │       │                       │   │   ├── ApiConfig.kt
+│   │   │       │                       │   │   └── ApiJson.kt
+│   │   │       │                       │   ├── model/
+│   │   │       │                       │   │   └── Credentials.kt
+│   │   │       │                       │   └── repository/
+│   │   │       │                       │       ├── AuthRepository.kt
+│   │   │       │                       │       ├── AuthService.kt
+│   │   │       │                       │       ├── SessionManager.kt
+│   │   │       │                       │       └── TokenStore.kt
+│   │   │       │                       └── util/
+│   │   │       │                           ├── AuthJson.kt
+│   │   │       │                           └── Errors.kt
+│   │   │       └── AndroidManifest.xml
+│   │   └── build.gradle.kts
+│   └── ui/
+│       ├── src/
+│       │   └── main/
+│       │       ├── java/
+│       │       │   └── com/
+│       │       │       └── example/
+│       │       │           └── ghalam/
+│       │       │               └── core/
+│       │       │                   └── ui/
+│       │       │                       ├── components/
+│       │       │                       │   ├── Components.kt
+│       │       │                       │   ├── CredentialsLoginScreen.kt
+│       │       │                       │   └── OfflineBanner.kt
+│       │       │                       ├── theme/
+│       │       │                       │   └── Theme.kt
+│       │       │                       └── util/
+│       │       │                           └── ImageLoaders.kt
+│       │       ├── res/
+│       │       │   └── font/
+│       │       │       ├── vazirmatn_bold.ttf
+│       │       │       ├── vazirmatn_medium.ttf
+│       │       │       ├── vazirmatn_regular.ttf
+│       │       │       └── vazirmatn_semibold.ttf
+│       │       └── AndroidManifest.xml
+│       └── build.gradle.kts
 ├── gradle/
 │   └── wrapper/
 │       └── gradle-wrapper.properties
+├── scripts/
+│   ├── step1-copy-fonts.sh
+│   └── step2-move-app-to-student.sh
+├── student/
+│   ├── src/
+│   │   └── main/
+│   │       ├── java/
+│   │       │   └── com/
+│   │       │       └── example/
+│   │       │           └── ghalam/
+│   │       │               ├── data/
+│   │       │               │   ├── api/
+│   │       │               │   │   └── GhalamApi.kt
+│   │       │               │   ├── local/
+│   │       │               │   │   ├── AppDatabase.kt
+│   │       │               │   │   ├── Daos.kt
+│   │       │               │   │   ├── Entities.kt
+│   │       │               │   │   └── Mappers.kt
+│   │       │               │   ├── model/
+│   │       │               │   │   ├── FilterModels.kt
+│   │       │               │   │   ├── TaskDetail.kt
+│   │       │               │   │   └── TaskModels.kt
+│   │       │               │   ├── paging/
+│   │       │               │   │   ├── TaskPagingSource.kt
+│   │       │               │   │   └── TaskRemoteMediator.kt
+│   │       │               │   ├── repository/
+│   │       │               │   │   ├── StudentAuthService.kt
+│   │       │               │   │   └── TaskRepository.kt
+│   │       │               │   └── Graph.kt
+│   │       │               ├── ui/
+│   │       │               │   ├── components/
+│   │       │               │   │   └── TaskCard.kt
+│   │       │               │   ├── screens/
+│   │       │               │   │   ├── LoginScreen.kt
+│   │       │               │   │   ├── TaskDetailScreen.kt
+│   │       │               │   │   └── TaskListScreen.kt
+│   │       │               │   └── viewmodel/
+│   │       │               │       ├── DetailViewModel.kt
+│   │       │               │       └── TasksViewModel.kt
+│   │       │               ├── util/
+│   │       │               │   ├── Downloads.kt
+│   │       │               │   └── ImageUtil.kt
+│   │       │               ├── GhalamApp.kt
+│   │       │               └── MainActivity.kt
+│   │       ├── res/
+│   │       │   └── xml/
+│   │       │       └── file_paths.xml
+│   │       └── AndroidManifest.xml
+│   └── build.gradle.kts
+├── teacher/
+│   ├── src/
+│   │   └── main/
+│   │       ├── java/
+│   │       │   └── com/
+│   │       │       └── example/
+│   │       │           └── ghalam/
+│   │       │               └── teacher/
+│   │       │                   ├── data/
+│   │       │                   │   ├── api/
+│   │       │                   │   │   └── TeacherApi.kt
+│   │       │                   │   ├── repository/
+│   │       │                   │   │   └── TeacherAuthService.kt
+│   │       │                   │   └── Graph.kt
+│   │       │                   ├── navigation/
+│   │       │                   │   └── TeacherNav.kt
+│   │       │                   ├── ui/
+│   │       │                   │   ├── screens/
+│   │       │                   │   │   └── TeacherHomeScreen.kt
+│   │       │                   │   └── viewmodel/
+│   │       │                   │       └── TeacherSessionViewModel.kt
+│   │       │                   ├── MainActivity.kt
+│   │       │                   └── TeacherApp.kt
+│   │       └── AndroidManifest.xml
+│   └── build.gradle.kts
 ├── CHANGES.txt
 ├── README.md
 ├── build.gradle.kts
