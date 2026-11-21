@@ -11,6 +11,8 @@ import com.example.ghalam.core.network.data.repository.TokenStore
 import com.example.ghalam.core.ui.util.createAuthImageLoader
 import com.example.ghalam.data.api.GhalamApi
 import com.example.ghalam.data.local.AppDatabase
+import com.example.ghalam.data.media.MediaManager
+import com.example.ghalam.data.media.MediaPrefs
 import com.example.ghalam.data.repository.StudentAuthService
 import com.example.ghalam.data.repository.TaskRepository
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +52,8 @@ object Graph {
         private set
     lateinit var imageLoader: ImageLoader
         private set
+    lateinit var media: MediaManager
+        private set
 
     /** Current token; null = logged out. Collected by the UI. */
     val token: StateFlow<String?> get() = apiClient.session.token
@@ -66,7 +70,12 @@ object Graph {
             context = appContext,
             config = ApiConfig(), // base URL https://ghalam.razzar.ir/, prefs "secure_prefs"
             // logged out (manually or 401): never leave one student's data for the next login
-            onSignedOut = { ioScope.launch { runCatching { db.clearAllTables() } } },
+            onSignedOut = {
+                ioScope.launch {
+                    runCatching { media.clearAll() } // downloaded files too
+                    runCatching { db.clearAllTables() }
+                }
+            },
         )
         store = apiClient.store
         client = apiClient.client
@@ -74,6 +83,7 @@ object Graph {
         repo = TaskRepository(api, db, apiClient.json)
         auth = AuthRepository(StudentAuthService(api), apiClient.session)
         imageLoader = createAuthImageLoader(appContext, client)
+        media = MediaManager(appContext, client, db.mediaDao(), MediaPrefs(appContext))
     }
 
     fun setToken(value: String?) = apiClient.session.setToken(value)

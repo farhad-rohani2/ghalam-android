@@ -64,7 +64,10 @@ class DetailViewModel(private val uuid: String) : ViewModel() {
 
             try {
                 val fresh = Graph.repo.fetchDetail(uuid)
-                _state.update { it.copy(loading = false, detail = fresh.toUi(), fromCache = false) }
+                val ui = fresh.toUi()
+                _state.update { it.copy(loading = false, detail = ui, fromCache = false) }
+                // save every file of this task now, so it also opens without internet later
+                Graph.media.prefetch(ui.questions.flatMap { it.teacherFiles + it.files })
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -129,6 +132,7 @@ class DetailViewModel(private val uuid: String) : ViewModel() {
             _state.update { it.copy(deleting = it.deleting + id) }
             try {
                 Graph.api.removeMedia(id, PageBody(PAGE_TASK)).close()
+                Graph.media.forget(file)
                 updateFiles(questionId) { list -> list.filterNot { it.uuid == id } }
                 _state.update { it.copy(message = "حذف شد") }
                 Graph.repo.refreshDetailQuietly(uuid)

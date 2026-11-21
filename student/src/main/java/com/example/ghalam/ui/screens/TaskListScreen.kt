@@ -1,6 +1,5 @@
 package com.example.ghalam.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,13 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,9 +19,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -32,12 +26,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -65,8 +56,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
@@ -79,6 +68,23 @@ import com.example.ghalam.core.ui.theme.PrimaryDark
 import com.example.ghalam.core.ui.theme.Violet
 import com.example.ghalam.data.model.Task
 import com.example.ghalam.ui.components.TaskCard
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.example.ghalam.ui.components.HeaderMenu
 import com.example.ghalam.ui.viewmodel.TasksViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -86,27 +92,63 @@ import com.example.ghalam.ui.viewmodel.TasksViewModel
 fun TaskListScreen(
     vm: TasksViewModel,
     tasks: LazyPagingItems<Task>,
-    listState: LazyListState,
+    listState: LazyGridState,
     onOpen: (uuid: String, finished: Boolean) -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenProfile: () -> Unit,
 ) {
     val filters by vm.filters.collectAsState()
     val selected by vm.selected.collectAsState()
     val active by vm.active.collectAsState()
     val query by vm.query.collectAsState()
     var showSheet by remember { mutableStateOf(false) }
+
+    // Search bar + filter chips hide while the list scrolls down and come back on scroll up / at the top.
+    var barsVisible by remember { mutableStateOf(true) }
+    val queryNow by rememberUpdatedState(query)
+    val scrollWatcher = remember {
+        object : NestedScrollConnection {
+            private var acc = 0f
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val dy = available.y
+                if (dy != 0f) {
+                    if (acc != 0f && (acc > 0f) != (dy > 0f)) acc = 0f
+                    acc += dy
+                    if (acc < -60f && queryNow.isBlank()) {
+                        barsVisible = false
+                        acc = 0f
+                    } else if (acc > 60f) {
+                        barsVisible = true
+                        acc = 0f
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 }
+            .collect { atTop -> if (atTop) barsVisible = true }
+    }
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).nestedScroll(scrollWatcher)) {
         Header(
             query = query,
             onQuery = vm::setQuery,
             filterCount = active.size,
             hasFilters = filters.isNotEmpty(),
             onFilter = { showSheet = true },
-            onLogout = vm::logout,
+            onProfile = onOpenProfile,
+            onSettings = onOpenSettings,
+            searchVisible = barsVisible,
         )
 
-        if (active.isNotEmpty()) {
+        AnimatedVisibility(
+            visible = active.isNotEmpty() && barsVisible,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut(),
+        ) {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -162,14 +204,17 @@ fun TaskListScreen(
                 onRefresh = { tasks.refresh() },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                LazyColumn(
+                // 1 column on a portrait phone, 2+ in landscape / on tablets
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 340.dp),
                     state = listState,
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 24.dp + navBottom),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     if (refresh is LoadState.Error) {
-                        item(key = "offline-banner") {
+                        item(key = "offline-banner", span = { GridItemSpan(maxLineSpan) }) {
                             OfflineBanner(
                                 text = "📴 اتصال برقرار نیست؛ لیست ذخیره‌شده نمایش داده می‌شود.",
                                 horizontalPadding = 0.dp,
@@ -180,14 +225,14 @@ fun TaskListScreen(
                         tasks[i]?.let { t -> TaskCard(t) { onOpen(t.uuid, t.deadlineFinished) } }
                     }
                     if (tasks.loadState.append is LoadState.Loading) {
-                        item {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
                             Box(Modifier.fillMaxWidth().padding(8.dp), Alignment.Center) {
                                 CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
                             }
                         }
                     }
                     if (tasks.loadState.append is LoadState.Error) {
-                        item {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
                             TextButton(onClick = { tasks.retry() }, modifier = Modifier.fillMaxWidth()) {
                                 Text("خطا در دریافت ادامه لیست؛ تلاش مجدد")
                             }
@@ -246,7 +291,9 @@ private fun Header(
     filterCount: Int,
     hasFilters: Boolean,
     onFilter: () -> Unit,
-    onLogout: () -> Unit,
+    onProfile: () -> Unit,
+    onSettings: () -> Unit,
+    searchVisible: Boolean,
 ) {
     Box(
         Modifier
@@ -254,53 +301,59 @@ private fun Header(
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
             .background(Brush.linearGradient(listOf(PrimaryDark, Primary, Violet))),
     ) {
-        Column(Modifier.statusBarsPadding().padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 20.dp)) {
+        Column(Modifier.statusBarsPadding().padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
                     Text("سلام 👋", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
                     Text("تکالیف من", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 }
-                IconButton(onClick = onLogout) {
-                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "خروج", tint = Color.White)
-                }
+                HeaderMenu(onProfile = onProfile, onSettings = onSettings)
             }
-            Spacer(Modifier.height(14.dp))
-            Row(Modifier.padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                TextField(
-                    value = query,
-                    onValueChange = onQuery,
-                    placeholder = { Text("جستجوی تکلیف…") },
-                    leadingIcon = { Icon(Icons.Filled.Search, null) },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, "پاک کردن") }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                    ),
-                    modifier = Modifier.weight(1f),
-                )
-                if (hasFilters) {
-                    Box(
-                        Modifier
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.22f))
-                            .clickable(onClick = onFilter)
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("فیلتر", color = Color.White, fontWeight = FontWeight.Medium)
-                            if (filterCount > 0) {
-                                Box(Modifier.size(22.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                                    Text("$filterCount", color = PrimaryDark, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            AnimatedVisibility(
+                visible = searchVisible,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                Column {
+                    Spacer(Modifier.height(14.dp))
+                    Row(Modifier.padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        TextField(
+                            value = query,
+                            onValueChange = onQuery,
+                            placeholder = { Text("جستجوی تکلیف…") },
+                            leadingIcon = { Icon(Icons.Filled.Search, null) },
+                            trailingIcon = {
+                                if (query.isNotEmpty()) {
+                                    IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, "پاک کردن") }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (hasFilters) {
+                            Box(
+                                Modifier
+                                    .height(56.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color.White.copy(alpha = 0.22f))
+                                    .clickable(onClick = onFilter)
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("فیلتر", color = Color.White, fontWeight = FontWeight.Medium)
+                                    if (filterCount > 0) {
+                                        Box(Modifier.size(22.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                                            Text("$filterCount", color = PrimaryDark, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
                                 }
                             }
                         }

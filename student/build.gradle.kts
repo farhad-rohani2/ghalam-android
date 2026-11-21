@@ -48,6 +48,10 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("io.coil-kt:coil-compose:2.7.0")
 
+    // In-app video playback (photos use ImageDecoder, PDFs use the built-in PdfRenderer)
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+
     // Room (offline cache)
     val room = "2.6.1"
     implementation("androidx.room:room-runtime:$room")

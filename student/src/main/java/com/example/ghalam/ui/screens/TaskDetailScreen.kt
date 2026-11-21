@@ -1,12 +1,16 @@
 package com.example.ghalam.ui.screens
 
+import com.example.ghalam.ui.components.AppIcons
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.border
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +19,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,7 +32,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -37,7 +39,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -46,7 +47,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,26 +56,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.ghalam.core.ui.components.EmptyState
 import com.example.ghalam.core.ui.components.OfflineBanner
 import com.example.ghalam.core.ui.components.Pill
@@ -89,13 +80,13 @@ import com.example.ghalam.core.ui.theme.SuccessBg
 import com.example.ghalam.core.ui.theme.Warn
 import com.example.ghalam.core.ui.theme.WarnBg
 import com.example.ghalam.core.ui.theme.lessonTone
-import com.example.ghalam.core.ui.theme.shimmer
-import com.example.ghalam.data.Graph
 import com.example.ghalam.data.model.DepItem
 import com.example.ghalam.data.model.DetailUi
 import com.example.ghalam.data.model.LinkItem
 import com.example.ghalam.data.model.QuestionUi
 import com.example.ghalam.data.model.RemoteFile
+import com.example.ghalam.ui.components.MediaGrid
+import com.example.ghalam.ui.components.HeaderMenu
 import com.example.ghalam.ui.viewmodel.DetailViewModel
 import com.example.ghalam.util.Downloads
 import java.io.File
@@ -107,6 +98,9 @@ fun TaskDetailScreen(
     finishedHint: Boolean?,
     onBack: () -> Unit,
     onOpenTask: (String) -> Unit,
+    onOpenMedia: (List<RemoteFile>, Int) -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenProfile: () -> Unit,
 ) {
     val vm: DetailViewModel = viewModel(key = uuid, factory = DetailViewModel.factory(uuid))
     val state by vm.state.collectAsState()
@@ -117,7 +111,6 @@ fun TaskDetailScreen(
 
     var targetQuestion by rememberSaveable { mutableIntStateOf(0) }
     var cameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-    var preview by remember { mutableStateOf<RemoteFile?>(null) }
     var toDelete by remember { mutableStateOf<Pair<Int, RemoteFile>?>(null) }
 
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
@@ -175,7 +168,7 @@ fun TaskDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    item { Hero(detail, finished, onBack, onRefresh = vm::load) }
+                    item { Hero(detail, finished, onBack, onRefresh = vm::load, onSettings = onOpenSettings, onProfile = onOpenProfile) }
                     if (state.fromCache) item { OfflineBanner() }
 
                     if (detail.dependencies.isNotEmpty()) {
@@ -203,14 +196,7 @@ fun TaskDetailScreen(
                             item(key = "tf-${q.id}") {
                                 Padded {
                                     SectionCard("فایل‌های پیوست", "📎") {
-                                        val images = q.teacherFiles.filter { it.isImage }
-                                        val others = q.teacherFiles.filterNot { it.isImage }
-                                        PhotoGrid(images, emptySet(), onOpen = { preview = it }, onDelete = null)
-                                        others.forEach { f ->
-                                            FileRow(f) {
-                                                toast(if (Downloads.enqueue(ctx, f)) "دانلود شروع شد (پوشه‌ی Downloads/Ghalam)" else "دانلود ممکن نشد")
-                                            }
-                                        }
+                                        MediaGrid(q.teacherFiles, emptySet(), onOpen = onOpenMedia, onDelete = null)
                                     }
                                 }
                             }
@@ -233,7 +219,7 @@ fun TaskDetailScreen(
                                     q = q,
                                     uploading = state.uploading,
                                     deleting = state.deleting,
-                                    onOpen = { preview = it },
+                                    onOpen = onOpenMedia,
                                     onDelete = { f -> toDelete = q.id to f },
                                     onCamera = { takePhoto(q.id) },
                                     onGallery = { pickFromGallery(q.id) },
@@ -258,7 +244,6 @@ fun TaskDetailScreen(
         )
     }
 
-    preview?.let { ImagePreview(it) { preview = null } }
 }
 
 @Composable
@@ -272,7 +257,7 @@ private fun hasHtmlText(html: String): Boolean =
 // ---------------------------------------------------------------- hero
 
 @Composable
-private fun Hero(detail: DetailUi, finished: Boolean, onBack: () -> Unit, onRefresh: () -> Unit) {
+private fun Hero(detail: DetailUi, finished: Boolean, onBack: () -> Unit, onRefresh: () -> Unit, onSettings: () -> Unit, onProfile: () -> Unit) {
     val tone = lessonTone(detail.lesson)
     Box(
         Modifier
@@ -287,7 +272,10 @@ private fun Hero(detail: DetailUi, finished: Boolean, onBack: () -> Unit, onRefr
         Column(Modifier.statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 RoundIcon(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "بازگشت", tint = Color.White) }
-                RoundIcon(onRefresh) { Icon(Icons.Filled.Refresh, "بروزرسانی", tint = Color.White) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HeaderMenu(onProfile = onProfile, onSettings = onSettings)
+                    RoundIcon(onRefresh) { Icon(Icons.Filled.Refresh, "بروزرسانی", tint = Color.White) }
+                }
             }
             Column(Modifier.padding(horizontal = 12.dp).padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (detail.lesson.isNotBlank()) Pill(detail.lesson, Color.White.copy(alpha = 0.22f), Color.White)
@@ -361,26 +349,6 @@ private fun DependencyRow(dep: DepItem, onOpen: (String) -> Unit) {
 }
 
 @Composable
-private fun FileRow(file: RemoteFile, onDownload: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onDownload)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-            Text("📄")
-        }
-        Text(file.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text("دانلود", color = Primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
 private fun LinkRow(link: LinkItem, onOpen: () -> Unit) {
     Row(
         Modifier
@@ -411,7 +379,7 @@ private fun AnswerSection(
     q: QuestionUi,
     uploading: Int,
     deleting: Set<String>,
-    onOpen: (RemoteFile) -> Unit,
+    onOpen: (List<RemoteFile>, Int) -> Unit,
     onDelete: (RemoteFile) -> Unit,
     onCamera: () -> Unit,
     onGallery: () -> Unit,
@@ -433,7 +401,7 @@ private fun AnswerSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            PhotoGrid(q.files, deleting, onOpen = onOpen, onDelete = onDelete)
+            MediaGrid(q.files, deleting, onOpen = onOpen, onDelete = onDelete)
             if (q.files.isEmpty()) {
                 Text(
                     "از برگه‌ی تکلیف خود عکس بگیرید و بفرستید.",
@@ -441,13 +409,25 @@ private fun AnswerSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = onCamera, enabled = uploading == 0, modifier = Modifier.weight(1f).height(50.dp), shape = MaterialTheme.shapes.medium) {
-                    Text("📷  دوربین", fontWeight = FontWeight.Bold)
-                }
-                OutlinedButton(onClick = onGallery, enabled = uploading == 0, modifier = Modifier.weight(1f).height(50.dp), shape = MaterialTheme.shapes.medium) {
-                    Text("🖼  گالری", fontWeight = FontWeight.Bold)
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                AnswerActionTile(
+                    icon = AppIcons.Camera,
+                    title = "دوربین",
+                    hint = "عکس بگیرید",
+                    primary = true,
+                    enabled = uploading == 0,
+                    onClick = onCamera,
+                    modifier = Modifier.weight(1f),
+                )
+                AnswerActionTile(
+                    icon = AppIcons.PhotoLibrary,
+                    title = "گالری",
+                    hint = "از گوشی انتخاب کنید",
+                    primary = false,
+                    enabled = uploading == 0,
+                    onClick = onGallery,
+                    modifier = Modifier.weight(1f),
+                )
             }
             if (uploading > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -459,95 +439,35 @@ private fun AnswerSection(
     }
 }
 
-/** Two-column square thumbnails; [onDelete] == null hides the delete button (teacher files). */
 @Composable
-private fun PhotoGrid(
-    files: List<RemoteFile>,
-    deleting: Set<String>,
-    onOpen: (RemoteFile) -> Unit,
-    onDelete: ((RemoteFile) -> Unit)?,
+private fun AnswerActionTile(
+    icon: ImageVector,
+    title: String,
+    hint: String,
+    primary: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    if (files.isEmpty()) return
-    val ctx = LocalContext.current
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        files.chunked(2).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { f ->
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.Transparent)
-                            .shimmer()
-                            .clickable { onOpen(f) },
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(ctx).data(f.fullUrl).crossfade(true).build(),
-                            contentDescription = f.name,
-                            imageLoader = Graph.imageLoader,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                        if (onDelete != null && f.uuid != null) {
-                            Box(
-                                Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(8.dp)
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.55f))
-                                    .clickable(enabled = f.uuid !in deleting) { onDelete(f) },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (f.uuid in deleting) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
-                                else Icon(Icons.Filled.Close, "حذف", tint = Color.White, modifier = Modifier.size(16.dp))
-                            }
-                        }
-                    }
-                }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
-            }
+    val shape = RoundedCornerShape(20.dp)
+    val content = if (primary) Color.White else Primary
+    val background = if (primary) Brush.linearGradient(listOf(Primary, lerp(Primary, Color.Black, 0.25f)))
+    else SolidColor(Primary.copy(alpha = 0.08f))
+    Column(
+        modifier
+            .alpha(if (enabled) 1f else 0.5f)
+            .clip(shape)
+            .background(background)
+            .then(if (primary) Modifier else Modifier.border(1.dp, Primary.copy(alpha = 0.25f), shape))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(Modifier.size(44.dp).clip(CircleShape).background(content.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(26.dp))
         }
-    }
-}
-
-@Composable
-private fun ImagePreview(file: RemoteFile, onClose: () -> Unit) {
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        var scale by remember { mutableFloatStateOf(1f) }
-        var offset by remember { mutableStateOf(Offset.Zero) }
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(1f, 5f)
-                        offset = if (scale == 1f) Offset.Zero else offset + pan
-                    }
-                },
-        ) {
-            AsyncImage(
-                model = file.fullUrl,
-                contentDescription = file.name,
-                imageLoader = Graph.imageLoader,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y),
-            )
-            Box(
-                Modifier
-                    .align(Alignment.TopStart)
-                    .statusBarsPadding()
-                    .padding(16.dp)
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f))
-                    .clickable(onClick = onClose),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Close, "بستن", tint = Color.White) }
-        }
+        Text(title, color = content, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+        Text(hint, color = content.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
     }
 }

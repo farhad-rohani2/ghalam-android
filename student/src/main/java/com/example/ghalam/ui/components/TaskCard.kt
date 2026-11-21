@@ -1,5 +1,8 @@
 package com.example.ghalam.ui.components
 
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
@@ -34,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -152,7 +154,11 @@ fun TaskCard(task: Task, onClick: () -> Unit) {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    Text("مشاهده ‹", color = Primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("مشاهده", color = Primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        // auto-mirrored: points to the left in RTL (the "forward" direction)
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
             if (imageAtEnd) thumb()
