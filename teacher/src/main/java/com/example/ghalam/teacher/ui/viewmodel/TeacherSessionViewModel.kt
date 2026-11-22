@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ghalam.core.network.data.model.Credentials
 import com.example.ghalam.core.network.data.repository.MissingTokenException
-import com.example.ghalam.core.network.util.userMessage
 import com.example.ghalam.core.ui.components.LoginUiState
 import com.example.ghalam.teacher.data.Graph
+import com.example.ghalam.teacher.util.teacherMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,14 +30,15 @@ class TeacherSessionViewModel : ViewModel() {
             } catch (e: MissingTokenException) {
                 loginState.value = LoginUiState(error = "پاسخ ورود توکن نداشت؛ نام کاربری و رمز را بررسی کنید")
             } catch (e: Exception) {
-                loginState.value = LoginUiState(error = e.userMessage())
+                loginState.value = LoginUiState(error = e.teacherMessage())
             }
         }
     }
 
+    /** Also removes this account's data from the phone (the screen asks for confirmation first). */
     fun logout() {
         viewModelScope.launch {
-            Graph.auth.logout()
+            Graph.signOut()
             loginState.value = LoginUiState()
         }
     }

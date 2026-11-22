@@ -1,46 +1,4 @@
 GhalamStudent/
-├── _app_backup/
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/
-│   │       │   └── com/
-│   │       │       └── example/
-│   │       │           └── ghalam/
-│   │       │               ├── data/
-│   │       │               │   ├── GhalamApi.kt
-│   │       │               │   ├── Graph.kt
-│   │       │               │   ├── LocalDb.kt
-│   │       │               │   ├── TaskDetail.kt
-│   │       │               │   ├── TaskPagingSource.kt
-│   │       │               │   ├── TaskRemoteMediator.kt
-│   │       │               │   ├── TaskRepository.kt
-│   │       │               │   └── TokenStore.kt
-│   │       │               ├── ui/
-│   │       │               │   ├── theme/
-│   │       │               │   │   └── Theme.kt
-│   │       │               │   ├── Components.kt
-│   │       │               │   ├── DetailViewModel.kt
-│   │       │               │   ├── LoginScreen.kt
-│   │       │               │   ├── OfflineBanner.kt
-│   │       │               │   ├── TaskDetailScreen.kt
-│   │       │               │   ├── TaskListScreen.kt
-│   │       │               │   └── TasksViewModel.kt
-│   │       │               ├── util/
-│   │       │               │   ├── Downloads.kt
-│   │       │               │   ├── Errors.kt
-│   │       │               │   └── ImageUtil.kt
-│   │       │               ├── GhalamApp.kt
-│   │       │               └── MainActivity.kt
-│   │       ├── res/
-│   │       │   ├── font/
-│   │       │   │   ├── vazirmatn_bold.ttf
-│   │       │   │   ├── vazirmatn_medium.ttf
-│   │       │   │   ├── vazirmatn_regular.ttf
-│   │       │   │   └── vazirmatn_semibold.ttf
-│   │       │   └── xml/
-│   │       │       └── file_paths.xml
-│   │       └── AndroidManifest.xml
-│   └── build.gradle.kts
 ├── core/
 │   ├── network/
 │   │   ├── src/
@@ -96,10 +54,12 @@ GhalamStudent/
 ├── gradle/
 │   └── wrapper/
 │       └── gradle-wrapper.properties
-├── scripts/
-│   ├── step1-copy-fonts.sh
-│   └── step2-move-app-to-student.sh
+├── password-android-ghalam/
+│   └── password
 ├── student/
+│   ├── bin_files/
+│   │   └── student-release.bin
+│   ├── release/
 │   ├── src/
 │   │   └── main/
 │   │       ├── java/
@@ -155,24 +115,57 @@ GhalamStudent/
 │   │       │               └── teacher/
 │   │       │                   ├── data/
 │   │       │                   │   ├── api/
+│   │       │                   │   │   ├── Dtos.kt
 │   │       │                   │   │   └── TeacherApi.kt
+│   │       │                   │   ├── local/
+│   │       │                   │   │   ├── Daos.kt
+│   │       │                   │   │   ├── Entities.kt
+│   │       │                   │   │   ├── Mappers.kt
+│   │       │                   │   │   └── TeacherDatabase.kt
+│   │       │                   │   ├── media/
+│   │       │                   │   │   ├── MediaKinds.kt
+│   │       │                   │   │   └── TeacherMedia.kt
 │   │       │                   │   ├── repository/
-│   │       │                   │   │   └── TeacherAuthService.kt
-│   │       │                   │   └── Graph.kt
+│   │       │                   │   │   ├── FeedbackModels.kt
+│   │       │                   │   │   ├── TeacherAuthService.kt
+│   │       │                   │   │   └── TeacherRepository.kt
+│   │       │                   │   ├── sync/
+│   │       │                   │   │   ├── SyncEngine.kt
+│   │       │                   │   │   ├── SyncScheduler.kt
+│   │       │                   │   │   └── SyncStatus.kt
+│   │       │                   │   ├── Graph.kt
+│   │       │                   │   └── SyncPrefs.kt
 │   │       │                   ├── navigation/
 │   │       │                   │   └── TeacherNav.kt
 │   │       │                   ├── ui/
+│   │       │                   │   ├── components/
+│   │       │                   │   │   └── Common.kt
 │   │       │                   │   ├── screens/
+│   │       │                   │   │   ├── StudentScreen.kt
+│   │       │                   │   │   ├── TaskScreen.kt
 │   │       │                   │   │   └── TeacherHomeScreen.kt
 │   │       │                   │   └── viewmodel/
+│   │       │                   │       ├── HomeViewModel.kt
+│   │       │                   │       ├── StudentViewModel.kt
+│   │       │                   │       ├── TaskViewModel.kt
 │   │       │                   │       └── TeacherSessionViewModel.kt
+│   │       │                   ├── util/
+│   │       │                   │   ├── ApiErrors.kt
+│   │       │                   │   ├── NetworkMonitor.kt
+│   │       │                   │   └── Persian.kt
 │   │       │                   ├── MainActivity.kt
 │   │       │                   └── TeacherApp.kt
+│   │       ├── res/
+│   │       │   └── xml/
+│   │       │       └── file_paths.xml
 │   │       └── AndroidManifest.xml
 │   └── build.gradle.kts
+├── CHANGELOG.md
 ├── CHANGES.txt
+├── Luxurious Golden Arabic Calligraphy Emblem 512.png
 ├── README.md
 ├── build.gradle.kts
 ├── directory-tree.txt
+├── ghalam-for-claude.zip
 ├── gradle.properties
 └── settings.gradle.kts
