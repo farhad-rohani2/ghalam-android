@@ -145,8 +145,6 @@ GhalamStudent/
 │   └── wrapper/
 │       └── gradle-wrapper.properties
 ├── student/
-│   ├── bin_files/
-│   │   └── student-release.bin
 │   ├── release/
 │   ├── src/
 │   │   └── main/
@@ -295,7 +293,6 @@ GhalamStudent/
 │   └── build.gradle.kts
 ├── CHANGELOG.md
 ├── CHANGES.txt
-├── Luxurious Golden Arabic Calligraphy Emblem 512.png
 ├── Luxurious Golden Arabic Calligraphy Emblem.png
 ├── README.md
 ├── build.gradle.kts
