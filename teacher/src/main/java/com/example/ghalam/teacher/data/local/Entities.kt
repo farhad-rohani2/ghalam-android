@@ -127,3 +127,20 @@ data class JsonCacheEntity(
     val json: String,
     val updatedAt: Long,
 )
+
+/**
+ * The teacher's feedback for the whole class on one task (no per-student part). The server keeps no
+ * modification time for it, so a newer write simply wins.
+ */
+@Entity(tableName = "general_feedback")
+data class GeneralFeedbackEntity(
+    @PrimaryKey val taskId: Long,
+    val positives: String,
+    val negatives: String,
+    val suggestions: String,
+    /** SYNCED | PENDING | ERROR (see [FeedbackState]). */
+    val syncState: String,
+    val lastError: String?,
+    val localUpdatedAt: Long,
+    val syncedAt: Long,
+)

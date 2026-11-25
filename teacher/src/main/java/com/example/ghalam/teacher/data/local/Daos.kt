@@ -23,7 +23,8 @@ interface ClassroomDao {
 interface TaskDao {
     @Query(
         """
-        SELECT t.*, (SELECT COUNT(*) FROM feedback f WHERE f.taskId = t.id AND f.syncState != 'SYNCED') AS pendingCount
+        SELECT t.*, ((SELECT COUNT(*) FROM feedback f WHERE f.taskId = t.id AND f.syncState != 'SYNCED') +
+               (SELECT COUNT(*) FROM general_feedback g WHERE g.taskId = t.id AND g.syncState != 'SYNCED')) AS pendingCount
         FROM tasks t
         ORDER BY (t.deadlineEpoch IS NULL), t.deadlineEpoch DESC
         """
@@ -112,10 +113,20 @@ interface FeedbackDao {
     @Query("SELECT * FROM feedback WHERE syncState = 'PENDING' ORDER BY localUpdatedAt")
     suspend fun pending(): List<FeedbackEntity>
 
-    @Query("SELECT COUNT(*) FROM feedback WHERE syncState != 'SYNCED'")
+    @Query(
+        """
+        SELECT (SELECT COUNT(*) FROM feedback WHERE syncState != 'SYNCED') +
+               (SELECT COUNT(*) FROM general_feedback WHERE syncState != 'SYNCED')
+        """
+    )
     fun observeUnsyncedCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM feedback WHERE syncState != 'SYNCED'")
+    @Query(
+        """
+        SELECT (SELECT COUNT(*) FROM feedback WHERE syncState != 'SYNCED') +
+               (SELECT COUNT(*) FROM general_feedback WHERE syncState != 'SYNCED')
+        """
+    )
     suspend fun unsyncedCount(): Int
 
     @Upsert
@@ -123,6 +134,9 @@ interface FeedbackDao {
 
     @Query("DELETE FROM feedback WHERE taskId = :taskId AND studentId = :studentId")
     suspend fun delete(taskId: Long, studentId: Long)
+
+    @Query("DELETE FROM feedback WHERE taskId = :taskId")
+    suspend fun deleteForTask(taskId: Long)
 
     @Query("DELETE FROM feedback WHERE taskId IN (:taskIds) AND syncState = 'SYNCED'")
     suspend fun deleteSyncedForTasks(taskIds: List<Long>)
@@ -168,4 +182,28 @@ interface CacheDao {
 
     @Query("DELETE FROM cached_json WHERE cacheKey IN (:keys)")
     suspend fun deleteKeys(keys: List<String>)
+}
+
+@Dao
+interface GeneralFeedbackDao {
+    @Query("SELECT * FROM general_feedback WHERE taskId = :taskId")
+    fun observe(taskId: Long): Flow<GeneralFeedbackEntity?>
+
+    @Query("SELECT * FROM general_feedback WHERE taskId = :taskId")
+    suspend fun get(taskId: Long): GeneralFeedbackEntity?
+
+    @Query("SELECT * FROM general_feedback WHERE syncState = 'PENDING' ORDER BY localUpdatedAt")
+    suspend fun pending(): List<GeneralFeedbackEntity>
+
+    @Upsert
+    suspend fun upsert(item: GeneralFeedbackEntity)
+
+    @Query("DELETE FROM general_feedback WHERE taskId = :taskId")
+    suspend fun delete(taskId: Long)
+
+    @Query("DELETE FROM general_feedback WHERE taskId IN (:taskIds) AND syncState = 'SYNCED'")
+    suspend fun deleteSyncedForTasks(taskIds: List<Long>)
+
+    @Query("SELECT DISTINCT taskId FROM general_feedback WHERE syncState != 'SYNCED'")
+    suspend fun taskIdsWithUnsynced(): List<Long>
 }

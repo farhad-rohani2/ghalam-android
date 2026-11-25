@@ -51,3 +51,19 @@ data class CachedJsonEntity(
     val json: String,
     val updatedAt: Long,
 )
+
+/**
+ * Index of downloaded media. path == null means "known but not downloaded" (bigger than the
+ * auto-download limit); otherwise path is the file name inside filesDir/media.
+ */
+@Entity(tableName = "media_files")
+data class MediaEntity(
+    @PrimaryKey val fileKey: String,
+    val url: String,
+    val name: String,
+    val mime: String?,
+    val kind: String,
+    val sizeBytes: Long,
+    val path: String?,
+    val updatedAt: Long,
+)

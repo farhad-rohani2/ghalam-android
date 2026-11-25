@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.example.ghalam.teacher.data.api.AnswerDto
 import com.example.ghalam.teacher.data.api.FeedbackDto
 import com.example.ghalam.teacher.data.api.FeedbackRowDto
+import com.example.ghalam.teacher.data.api.GeneralFeedbackDto
 import com.example.ghalam.teacher.data.api.LessonDto
 import com.example.ghalam.teacher.data.api.LevelDto
 import com.example.ghalam.teacher.data.api.MetaDto
@@ -12,10 +13,13 @@ import com.example.ghalam.teacher.data.api.TaskDetailDto
 import com.example.ghalam.teacher.data.local.ClassroomEntity
 import com.example.ghalam.teacher.data.local.FeedbackEntity
 import com.example.ghalam.teacher.data.local.FeedbackState
+import com.example.ghalam.teacher.data.local.GeneralFeedbackEntity
+import com.example.ghalam.teacher.data.local.JsonCacheEntity
 import com.example.ghalam.teacher.data.local.SubmissionEntity
 import com.example.ghalam.teacher.data.local.SubmissionRow
 import com.example.ghalam.teacher.data.local.TaskEntity
 import com.example.ghalam.teacher.data.local.TaskRow
+import com.example.ghalam.teacher.data.local.toEntity
 import com.example.ghalam.teacher.data.local.TeacherDatabase
 import java.text.Collator
 import java.util.Locale
@@ -277,6 +281,131 @@ class TeacherRepository(
             put("suggestions", JsonPrimitive(e.suggestions.trim()))
         }
     }
+
+    // ---------------------------------------------------------------- general feedback of a task
+
+    fun generalFeedback(taskId: Long): Flow<GeneralFeedbackEntity?> = db.generalFeedbackDao().observe(taskId)
+
+    /** Writes the class-wide feedback to Room (state PENDING); empty texts delete it on the server. */
+    suspend fun saveGeneralFeedback(taskId: Long, positives: String, negatives: String, suggestions: String) {
+        val now = System.currentTimeMillis()
+        var changed = false
+        db.withTransaction {
+            val dao = db.generalFeedbackDao()
+            val old = dao.get(taskId)
+            val empty = positives.isBlank() && negatives.isBlank() && suggestions.isBlank()
+            if (old == null && empty) return@withTransaction
+            dao.upsert(
+                GeneralFeedbackEntity(
+                    taskId = taskId,
+                    positives = positives,
+                    negatives = negatives,
+                    suggestions = suggestions,
+                    syncState = FeedbackState.PENDING,
+                    lastError = null,
+                    localUpdatedAt = now,
+                    syncedAt = old?.syncedAt ?: 0L,
+                ),
+            )
+            changed = true
+        }
+        if (changed) onFeedbackChanged()
+    }
+
+    suspend fun retryGeneralFeedback(taskId: Long) {
+        db.withTransaction {
+            val cur = db.generalFeedbackDao().get(taskId) ?: return@withTransaction
+            if (cur.syncState == FeedbackState.ERROR) {
+                db.generalFeedbackDao().upsert(cur.copy(syncState = FeedbackState.PENDING, lastError = null))
+            }
+        }
+        onFeedbackChanged()
+    }
+
+    /** Server -> phone, unless the phone has unsent changes. */
+    suspend fun applyServerGeneral(taskId: Long, dto: GeneralFeedbackDto, now: Long) {
+        db.withTransaction {
+            val dao = db.generalFeedbackDao()
+            val cur = dao.get(taskId)
+            if (cur != null && cur.syncState != FeedbackState.SYNCED) return@withTransaction
+            val empty = dto.positives.isBlank() && dto.negatives.isBlank() && dto.suggestions.isBlank()
+            if (empty) {
+                if (cur != null) dao.delete(taskId)
+            } else {
+                dao.upsert(
+                    GeneralFeedbackEntity(taskId, dto.positives, dto.negatives, dto.suggestions, FeedbackState.SYNCED, null, now, now),
+                )
+            }
+        }
+    }
+
+    suspend fun markGeneralError(sent: GeneralFeedbackEntity, message: String) {
+        db.withTransaction {
+            val cur = db.generalFeedbackDao().get(sent.taskId) ?: return@withTransaction
+            if (cur.localUpdatedAt == sent.localUpdatedAt) {
+                db.generalFeedbackDao().upsert(cur.copy(syncState = FeedbackState.ERROR, lastError = message))
+            }
+        }
+    }
+
+    suspend fun onGeneralUploaded(sent: GeneralFeedbackEntity, saved: GeneralFeedbackDto, now: Long) {
+        db.withTransaction {
+            val dao = db.generalFeedbackDao()
+            val cur = dao.get(sent.taskId) ?: return@withTransaction
+            if (cur.localUpdatedAt != sent.localUpdatedAt) return@withTransaction // edited again: next round sends it
+            val empty = saved.positives.isBlank() && saved.negatives.isBlank() && saved.suggestions.isBlank()
+            if (empty) dao.delete(sent.taskId)
+            else dao.upsert(GeneralFeedbackEntity(sent.taskId, saved.positives, saved.negatives, saved.suggestions, FeedbackState.SYNCED, null, now, now))
+        }
+    }
+
+    fun buildGeneralBody(e: GeneralFeedbackEntity): JsonObject = buildJsonObject {
+        put("positives", JsonPrimitive(e.positives.trim()))
+        put("negatives", JsonPrimitive(e.negatives.trim()))
+        put("suggestions", JsonPrimitive(e.suggestions.trim()))
+    }
+
+    // ---------------------------------------------------------------- tasks created / edited / deleted on the phone
+
+    /** A task the server just returned (after create / update / file changes): into Room, list and detail. */
+    suspend fun applyTaskDetail(dto: TaskDetailDto) {
+        db.withTransaction {
+            val old = db.taskDao().get(dto.id)
+            val asTask = com.example.ghalam.teacher.data.api.TaskDto(
+                id = dto.id,
+                uuid = dto.uuid,
+                classroom = dto.classroom,
+                lesson = dto.lesson,
+                description = dto.description,
+                deadlineAt = dto.deadlineAt,
+                deadlineJalali = dto.deadlineJalali,
+                isOverdue = dto.isOverdue,
+                stats = dto.stats,
+            )
+            db.taskDao().upsertAll(listOf(asTask.toEntity(old?.submissionsSyncedAt ?: 0L)))
+            db.cacheDao().put(JsonCacheEntity("task:${dto.id}", json.encodeToString(TaskDetailDto.serializer(), dto), System.currentTimeMillis()))
+        }
+    }
+
+    /** The task was deleted on the server: everything of it on the phone goes (also unsent feedback). */
+    suspend fun removeTaskLocal(taskId: Long) {
+        db.withTransaction {
+            db.answerDao().deleteForTasks(listOf(taskId))
+            db.submissionDao().deleteForTask(taskId)
+            db.feedbackDao().deleteForTask(taskId)
+            db.generalFeedbackDao().delete(taskId)
+            db.cacheDao().deleteKeys(listOf("task:$taskId"))
+            db.taskDao().deleteByIds(listOf(taskId))
+        }
+    }
+
+    /** report_modes of the last /meta, or the four known ones until it has been downloaded. */
+    fun reportModes(): Flow<Map<String, String>> = db.cacheDao().observe("meta").map { row ->
+        row?.let { decode(MetaDto.serializer(), it.json) }?.reportModes?.takeIf { it.isNotEmpty() } ?: DEFAULT_REPORT_MODES
+    }
+
+    suspend fun defaultDeadline(): String? =
+        db.cacheDao().get("meta")?.let { decode(MetaDto.serializer(), it.json) }?.defaultDeadline
 
     // ---------------------------------------------------------------- helpers
 

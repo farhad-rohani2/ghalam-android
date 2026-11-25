@@ -62,7 +62,9 @@ import com.example.ghalam.teacher.data.media.MediaKind
 import com.example.ghalam.teacher.data.media.MediaKinds
 import com.example.ghalam.teacher.data.sync.absoluteUrl
 import com.example.ghalam.teacher.ui.components.Avatar
+import com.example.ghalam.teacher.ui.components.HeaderAction
 import com.example.ghalam.teacher.ui.components.LevelSelector
+import com.example.ghalam.teacher.ui.components.NoteField
 import com.example.ghalam.teacher.ui.components.ScreenHeader
 import com.example.ghalam.teacher.ui.components.StatusPill
 import com.example.ghalam.teacher.ui.viewmodel.StudentViewModel
@@ -82,6 +84,8 @@ fun StudentScreen(
     studentId: Long,
     onBack: () -> Unit,
     onOpenStudent: (Long) -> Unit,
+    onMessage: () -> Unit,
+    onOpenViewer: (String) -> Unit,
 ) {
     val vm: StudentViewModel = viewModel(
         key = "student-$taskId-$studentId",
@@ -112,6 +116,7 @@ fun StudentScreen(
             title = submission?.name ?: "دانش‌آموز",
             subtitle = task?.let { "${it.lessonTitle} • ${it.description}" },
             onBack = { leave(onBack) },
+            actions = { HeaderAction("✉️", onClick = { leave(onMessage) }) },
         )
 
         LazyColumn(
@@ -167,7 +172,7 @@ fun StudentScreen(
                 if (files.isNotEmpty()) {
                     item(key = "files") {
                         SectionCard(title = "فایل‌های ارسالی", emoji = "📎") {
-                            files.forEach { f -> AnswerFileItem(f, vm) }
+                            files.forEach { f -> AnswerFileItem(f, vm, onOpenViewer) }
                         }
                     }
                 }
@@ -216,9 +221,9 @@ fun StudentScreen(
                         }
                         TextButton(onClick = { showAddExtra = true }) { Text("＋ افزودن پارامتر") }
 
-                        FeedbackTextField("نکات مثبت", form.positives) { v -> vm.edit { it.copy(positives = v) } }
-                        FeedbackTextField("نکات قابل بهبود", form.negatives) { v -> vm.edit { it.copy(negatives = v) } }
-                        FeedbackTextField("راهکار", form.suggestions) { v -> vm.edit { it.copy(suggestions = v) } }
+                        NoteField("نکات مثبت", form.positives) { v -> vm.edit { it.copy(positives = v) } }
+                        NoteField("نکات قابل بهبود", form.negatives) { v -> vm.edit { it.copy(negatives = v) } }
+                        NoteField("راهکار", form.suggestions) { v -> vm.edit { it.copy(suggestions = v) } }
                     }
                 }
             }
@@ -262,26 +267,6 @@ fun StudentScreen(
     }
 }
 
-/** The text lives in local state while typing (a flow-backed value makes the cursor jump). */
-@Composable
-private fun FeedbackTextField(label: String, value: String, onChange: (String) -> Unit) {
-    var local by remember { mutableStateOf(value) }
-    LaunchedEffect(value) { if (value != local) local = value }
-    OutlinedTextField(
-        value = local,
-        onValueChange = {
-            val text = it.take(MAX_TEXT)
-            local = text
-            onChange(text)
-        },
-        label = { Text(label) },
-        modifier = Modifier.fillMaxWidth(),
-        minLines = 2,
-        shape = MaterialTheme.shapes.medium,
-    )
-}
-
-private const val MAX_TEXT = 2000
 
 @Composable
 private fun AddExtraDialog(existing: List<String>, onDismiss: () -> Unit, onAdd: (String) -> Unit) {
@@ -364,7 +349,7 @@ private fun SyncBanner(
 
 /** A downloaded image is shown inline; other files get an "open" button; a missing one a "download" button. */
 @Composable
-private fun AnswerFileItem(file: AnswerFileDto, vm: StudentViewModel) {
+private fun AnswerFileItem(file: AnswerFileDto, vm: StudentViewModel, onOpenViewer: (String) -> Unit) {
     val context = LocalContext.current
     val url = absoluteUrl(file.url)
     val row by Graph.media.observe(url).collectAsState(initial = null)
@@ -378,7 +363,11 @@ private fun AnswerFileItem(file: AnswerFileDto, vm: StudentViewModel) {
     val mime = row?.mime ?: file.mime ?: MediaKinds.mimeOfExt(MediaKinds.extensionOf(file.name)) ?: "application/octet-stream"
 
     fun open() {
-        if (local == null || !Graph.media.openExternally(context, local, mime)) {
+        if (local == null) return
+        // images and PDFs open inside the app; everything else in another app
+        if (kind == MediaKind.IMAGE || kind == MediaKind.PDF) {
+            onOpenViewer(Graph.media.keyOf(url))
+        } else if (!Graph.media.openExternally(context, local, mime)) {
             Toast.makeText(context, "برنامه‌ای برای باز کردن این فایل پیدا نشد", Toast.LENGTH_SHORT).show()
         }
     }

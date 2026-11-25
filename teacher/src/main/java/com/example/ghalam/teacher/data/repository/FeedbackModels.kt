@@ -32,3 +32,11 @@ val DEFAULT_LEVELS = listOf(
     LevelDto(2, "قابل قبول", "🙂"),
     LevelDto(1, "نیازمند تلاش", "💪"),
 )
+
+/** Used until /meta has been downloaded once. */
+val DEFAULT_REPORT_MODES = linkedMapOf(
+    "full" to "کامل: به تفکیک تکلیف، با اسامی",
+    "names_in_summary" to "تکلیف‌به‌تکلیف بدون اسم + جمع‌بندی اسامی",
+    "summary" to "فقط جمع‌بندی",
+    "brief" to "خلاصهٔ تکلیف‌به‌تکلیف، بدون جمع‌بندی",
+)

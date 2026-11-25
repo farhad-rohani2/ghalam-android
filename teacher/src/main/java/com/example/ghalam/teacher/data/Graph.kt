@@ -8,8 +8,10 @@ import com.example.ghalam.core.network.data.api.ApiConfig
 import com.example.ghalam.core.network.data.repository.AuthRepository
 import com.example.ghalam.core.ui.util.createAuthImageLoader
 import com.example.ghalam.teacher.data.api.TeacherApi
+import com.example.ghalam.teacher.data.local.MIGRATION_1_2
 import com.example.ghalam.teacher.data.local.TeacherDatabase
 import com.example.ghalam.teacher.data.media.TeacherMedia
+import com.example.ghalam.teacher.data.repository.OnlineRepository
 import com.example.ghalam.teacher.data.repository.TeacherAuthService
 import com.example.ghalam.teacher.data.repository.TeacherRepository
 import com.example.ghalam.teacher.data.sync.SyncEngine
@@ -51,6 +53,8 @@ object Graph {
         private set
     lateinit var repo: TeacherRepository
         private set
+    lateinit var online: OnlineRepository
+        private set
     lateinit var sync: SyncEngine
         private set
     lateinit var imageLoader: ImageLoader
@@ -63,7 +67,9 @@ object Graph {
         if (::apiClient.isInitialized) return
         appContext = context.applicationContext
 
-        db = Room.databaseBuilder(appContext, TeacherDatabase::class.java, DB_NAME).build()
+        db = Room.databaseBuilder(appContext, TeacherDatabase::class.java, DB_NAME)
+            .addMigrations(MIGRATION_1_2)
+            .build()
         prefs = SyncPrefs(appContext)
         network = NetworkMonitor(appContext)
         scheduler = SyncScheduler(appContext)
@@ -76,6 +82,7 @@ object Graph {
         api = apiClient.create(TeacherApi::class.java)
         media = TeacherMedia(appContext, apiClient.client, db.mediaDao())
         repo = TeacherRepository(db, apiClient.json) { scheduler.enqueueUpload() }
+        online = OnlineRepository(api, db, repo, media, appContext.contentResolver)
         sync = SyncEngine(api, db, repo, media, prefs, network, apiClient.json)
         imageLoader = createAuthImageLoader(appContext, apiClient.client)
         auth = AuthRepository(TeacherAuthService(api) { id, name -> onLoggedIn(id, name) }, apiClient.session)

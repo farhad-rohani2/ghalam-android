@@ -15,19 +15,15 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,7 +34,6 @@ import com.example.ghalam.core.ui.components.EmptyState
 import com.example.ghalam.core.ui.components.OfflineBanner
 import com.example.ghalam.core.ui.components.Pill
 import com.example.ghalam.core.ui.components.SkeletonCard
-import com.example.ghalam.core.ui.theme.Danger
 import com.example.ghalam.core.ui.theme.Warn
 import com.example.ghalam.core.ui.theme.WarnBg
 import com.example.ghalam.core.ui.theme.lessonTone
@@ -56,7 +51,9 @@ import com.example.ghalam.teacher.util.relativeTime
 @Composable
 fun TeacherHomeScreen(
     onOpenTask: (Long) -> Unit,
-    onLogout: () -> Unit,
+    onNewTask: () -> Unit,
+    onReports: () -> Unit,
+    onSettings: () -> Unit,
     listState: LazyListState = rememberLazyListState(),
     vm: HomeViewModel = viewModel(),
 ) {
@@ -68,7 +65,6 @@ fun TeacherHomeScreen(
     val unsynced by vm.unsynced.collectAsState()
     val classroomFilter by vm.classroomFilter.collectAsState()
     val timeFilter by vm.timeFilter.collectAsState()
-    var confirmLogout by remember { mutableStateOf(false) }
 
     val greeting = remember {
         Graph.prefs.userName.takeIf { it.isNotBlank() }?.let { "سلام $it 👋" } ?: "سلام 👋"
@@ -79,8 +75,10 @@ fun TeacherHomeScreen(
             title = "پنل معلم",
             subtitle = greeting,
             actions = {
+                HeaderAction("➕", onClick = onNewTask)
+                HeaderAction("📋", onClick = onReports)
+                HeaderAction("⚙️", onClick = onSettings)
                 HeaderAction("🔄", onClick = vm::refresh)
-                HeaderAction("🚪", onClick = { confirmLogout = true })
             },
         )
 
@@ -147,23 +145,6 @@ fun TeacherHomeScreen(
                 }
             }
         }
-    }
-
-    if (confirmLogout) {
-        AlertDialog(
-            onDismissRequest = { confirmLogout = false },
-            title = { Text("خروج از حساب") },
-            text = {
-                Text(
-                    if (unsynced > 0) "${unsynced.fa()} بازخورد هنوز به سرور ارسال نشده و با خروج از بین می‌رود. اگر به اینترنت وصل شوید و همگام‌سازی کنید، ابتدا ارسال می‌شوند. خارج می‌شوید؟"
-                    else "داده‌های ذخیره‌شده‌ی این حساب از روی گوشی پاک می‌شود.",
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { confirmLogout = false; onLogout() }) { Text("خروج", color = Danger) }
-            },
-            dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("انصراف") } },
-        )
     }
 }
 

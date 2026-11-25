@@ -24,6 +24,8 @@ data class MetaDto(
     @SerialName("default_deadline") val defaultDeadline: String? = null,
     val levels: List<LevelDto> = emptyList(),
     @SerialName("submission_statuses") val submissionStatuses: Map<String, String> = emptyMap(),
+    @SerialName("report_modes") val reportModes: Map<String, String> = emptyMap(),
+    @SerialName("message_tokens") val messageTokens: Map<String, String> = emptyMap(),
 )
 
 @Serializable
@@ -86,6 +88,8 @@ data class TaskFileDto(
     val mime: String? = null,
     val size: Long = 0,
     val url: String = "",
+    @SerialName("link_download") val linkDownload: String? = null,
+    @SerialName("link_page") val linkPage: String? = null,
 )
 
 @Serializable
@@ -218,3 +222,83 @@ data class FeedbackDto(
 
 @Serializable
 data class FeedbackResponse(val data: FeedbackDto = FeedbackDto())
+
+// ---------------------------------------------------------------- task management
+
+/** Response of POST/PUT tasks: the task and the download links the server could not fetch. */
+@Serializable
+data class TaskStoreResponse(
+    val data: TaskDetailDto = TaskDetailDto(),
+    @SerialName("failed_links") val failedLinks: List<String> = emptyList(),
+)
+
+@Serializable
+data class OkDto(val ok: Boolean = false)
+
+@Serializable
+data class OkResponse(val data: OkDto = OkDto())
+
+@Serializable
+data class GeneralFeedbackResponse(val data: GeneralFeedbackDto = GeneralFeedbackDto())
+
+// ---------------------------------------------------------------- reports
+
+@Serializable
+data class ReportDataDto(
+    val mode: String = "full",
+    @SerialName("tasks_count") val tasksCount: Int = 0,
+    @SerialName("task_ids") val taskIds: List<Long> = emptyList(),
+    val text: String = "",
+)
+
+@Serializable
+data class ReportResponse(val data: ReportDataDto = ReportDataDto())
+
+// ---------------------------------------------------------------- messages
+
+@Serializable
+data class MessageTemplateDto(
+    val key: String = "",
+    val label: String = "",
+    val body: String = "",
+    @SerialName("default_body") val defaultBody: String? = null,
+    val custom: Boolean = false,
+)
+
+@Serializable
+data class TemplatesDto(
+    val templates: List<MessageTemplateDto> = emptyList(),
+    val tokens: Map<String, String> = emptyMap(),
+    /** Only in the response of POST message-templates: the key of the new template. */
+    val key: String? = null,
+)
+
+@Serializable
+data class TemplatesResponse(val data: TemplatesDto = TemplatesDto())
+
+@Serializable
+data class MessageTaskDto(
+    val id: Long = 0,
+    val lesson: String = "",
+    val description: String = "",
+    @SerialName("deadline_jalali") val deadlineJalali: String? = null,
+    val status: String = "none",
+    @SerialName("status_label") val statusLabel: String = "",
+)
+
+@Serializable
+data class MessageContextDto(
+    val tasks: List<MessageTaskDto> = emptyList(),
+    @SerialName("pending_task_ids") val pendingTaskIds: List<Long> = emptyList(),
+    val templates: List<MessageTemplateDto> = emptyList(),
+    val tokens: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class MessageContextResponse(val data: MessageContextDto = MessageContextDto())
+
+@Serializable
+data class ComposedMessageDto(val text: String = "")
+
+@Serializable
+data class ComposeResponse(val data: ComposedMessageDto = ComposedMessageDto())

@@ -80,6 +80,16 @@ interface GhalamApi {
         @Part("json") json: RequestBody,
     ): JsonObject
 
+    /**
+     * Saves the text of an answer. Body: {"pageId":66, "question-<id>":{"answer":"..."}}.
+     * The server replies with an empty body.
+     */
+    @POST("api/blueberry/sections/task/{uuid}")
+    suspend fun answer(
+        @Path("uuid") uuid: String,
+        @Body body: JsonObject,
+    ): ResponseBody
+
     /** uuid = options.metadata.uuid of the uploaded file. */
     @HTTP(method = "DELETE", path = "api/blueberry/sections/task/remove-media/{uuid}", hasBody = true)
     suspend fun removeMedia(

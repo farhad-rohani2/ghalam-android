@@ -51,11 +51,99 @@ GhalamStudent/
 │       │       │       └── vazirmatn_semibold.ttf
 │       │       └── AndroidManifest.xml
 │       └── build.gradle.kts
+├── ghalam-for-claude/
+│   ├── core/
+│   │   ├── network/
+│   │   │   └── src/
+│   │   │       └── main/
+│   │   │           └── java/
+│   │   │               └── com/
+│   │   │                   └── example/
+│   │   │                       └── ghalam/
+│   │   │                           └── core/
+│   │   │                               └── network/
+│   │   │                                   ├── data/
+│   │   │                                   │   ├── api/
+│   │   │                                   │   ├── model/
+│   │   │                                   │   └── repository/
+│   │   │                                   └── util/
+│   │   └── ui/
+│   │       └── src/
+│   │           └── main/
+│   │               ├── java/
+│   │               │   └── com/
+│   │               │       └── example/
+│   │               │           └── ghalam/
+│   │               │               └── core/
+│   │               │                   └── ui/
+│   │               │                       ├── components/
+│   │               │                       ├── theme/
+│   │               │                       └── util/
+│   │               └── res/
+│   │                   └── font/
+│   ├── gradle/
+│   │   └── wrapper/
+│   ├── student/
+│   │   └── src/
+│   │       └── main/
+│   │           ├── java/
+│   │           │   └── com/
+│   │           │       └── example/
+│   │           │           └── ghalam/
+│   │           │               ├── data/
+│   │           │               │   ├── api/
+│   │           │               │   ├── local/
+│   │           │               │   ├── media/
+│   │           │               │   ├── model/
+│   │           │               │   ├── paging/
+│   │           │               │   └── repository/
+│   │           │               ├── ui/
+│   │           │               │   ├── components/
+│   │           │               │   ├── screens/
+│   │           │               │   └── viewmodel/
+│   │           │               └── util/
+│   │           └── res/
+│   │               ├── values/
+│   │               └── xml/
+│   └── teacher/
+│       └── src/
+│           └── main/
+│               ├── java/
+│               │   └── com/
+│               │       └── example/
+│               │           └── ghalam/
+│               │               └── teacher/
+│               │                   ├── data/
+│               │                   │   ├── api/
+│               │                   │   ├── local/
+│               │                   │   ├── media/
+│               │                   │   ├── repository/
+│               │                   │   └── sync/
+│               │                   ├── navigation/
+│               │                   ├── ui/
+│               │                   │   ├── components/
+│               │                   │   ├── screens/
+│               │                   │   └── viewmodel/
+│               │                   └── util/
+│               └── res/
+│                   └── xml/
+├── ghalam-offline-submit/
+│   ├── core/
+│   │   ├── network/
+│   │   └── ui/
+│   ├── student/
+│   │   └── src/
+│   │       └── main/
+│   │           └── res/
+│   │               └── xml/
+│   └── teacher/
+│       └── src/
+│           └── main/
+│               └── res/
+│                   └── xml/
 ├── gradle/
 │   └── wrapper/
 │       └── gradle-wrapper.properties
-├── password-android-ghalam/
-│   └── password
 ├── student/
 │   ├── bin_files/
 │   │   └── student-release.bin
@@ -73,11 +161,23 @@ GhalamStudent/
 │   │       │               │   │   ├── AppDatabase.kt
 │   │       │               │   │   ├── Daos.kt
 │   │       │               │   │   ├── Entities.kt
-│   │       │               │   │   └── Mappers.kt
+│   │       │               │   │   ├── Mappers.kt
+│   │       │               │   │   ├── OutboxDao.kt
+│   │       │               │   │   └── OutboxEntities.kt
+│   │       │               │   ├── media/
+│   │       │               │   │   ├── MediaManager.kt
+│   │       │               │   │   ├── MediaPrefs.kt
+│   │       │               │   │   └── MediaType.kt
 │   │       │               │   ├── model/
 │   │       │               │   │   ├── FilterModels.kt
 │   │       │               │   │   ├── TaskDetail.kt
 │   │       │               │   │   └── TaskModels.kt
+│   │       │               │   ├── outbox/
+│   │       │               │   │   ├── Outbox.kt
+│   │       │               │   │   ├── SubmitPrefs.kt
+│   │       │               │   │   ├── UploadEngine.kt
+│   │       │               │   │   ├── UploadNotifier.kt
+│   │       │               │   │   └── UploadScheduler.kt
 │   │       │               │   ├── paging/
 │   │       │               │   │   ├── TaskPagingSource.kt
 │   │       │               │   │   └── TaskRemoteMediator.kt
@@ -87,9 +187,17 @@ GhalamStudent/
 │   │       │               │   └── Graph.kt
 │   │       │               ├── ui/
 │   │       │               │   ├── components/
+│   │       │               │   │   ├── AppIcons.kt
+│   │       │               │   │   ├── HeaderMenu.kt
+│   │       │               │   │   ├── MediaComponents.kt
+│   │       │               │   │   ├── MediaViewer.kt
+│   │       │               │   │   ├── PageHeader.kt
+│   │       │               │   │   ├── SubmitSettingsDialog.kt
 │   │       │               │   │   └── TaskCard.kt
 │   │       │               │   ├── screens/
 │   │       │               │   │   ├── LoginScreen.kt
+│   │       │               │   │   ├── MediaSettingsScreen.kt
+│   │       │               │   │   ├── ProfileScreen.kt
 │   │       │               │   │   ├── TaskDetailScreen.kt
 │   │       │               │   │   └── TaskListScreen.kt
 │   │       │               │   └── viewmodel/
@@ -97,10 +205,22 @@ GhalamStudent/
 │   │       │               │       └── TasksViewModel.kt
 │   │       │               ├── util/
 │   │       │               │   ├── Downloads.kt
-│   │       │               │   └── ImageUtil.kt
+│   │       │               │   ├── ImageUtil.kt
+│   │       │               │   ├── MediaBitmaps.kt
+│   │       │               │   └── NetworkMonitor.kt
 │   │       │               ├── GhalamApp.kt
 │   │       │               └── MainActivity.kt
 │   │       ├── res/
+│   │       │   ├── drawable/
+│   │       │   │   └── ic_launcher_background.xml
+│   │       │   ├── drawable-nodpi/
+│   │       │   │   ├── ic_launcher_art.png
+│   │       │   │   └── ic_launcher_monochrome.png
+│   │       │   ├── mipmap-anydpi-v26/
+│   │       │   │   ├── ic_launcher.xml
+│   │       │   │   └── ic_launcher_round.xml
+│   │       │   ├── values/
+│   │       │   │   └── strings.xml
 │   │       │   └── xml/
 │   │       │       └── file_paths.xml
 │   │       └── AndroidManifest.xml
@@ -127,6 +247,7 @@ GhalamStudent/
 │   │       │                   │   │   └── TeacherMedia.kt
 │   │       │                   │   ├── repository/
 │   │       │                   │   │   ├── FeedbackModels.kt
+│   │       │                   │   │   ├── OnlineRepository.kt
 │   │       │                   │   │   ├── TeacherAuthService.kt
 │   │       │                   │   │   └── TeacherRepository.kt
 │   │       │                   │   ├── sync/
@@ -139,33 +260,45 @@ GhalamStudent/
 │   │       │                   │   └── TeacherNav.kt
 │   │       │                   ├── ui/
 │   │       │                   │   ├── components/
-│   │       │                   │   │   └── Common.kt
+│   │       │                   │   │   ├── Common.kt
+│   │       │                   │   │   └── JalaliPicker.kt
 │   │       │                   │   ├── screens/
+│   │       │                   │   │   ├── FileViewerScreen.kt
+│   │       │                   │   │   ├── MessageScreen.kt
+│   │       │                   │   │   ├── ReportsScreen.kt
+│   │       │                   │   │   ├── SettingsScreen.kt
 │   │       │                   │   │   ├── StudentScreen.kt
+│   │       │                   │   │   ├── TaskEditScreen.kt
 │   │       │                   │   │   ├── TaskScreen.kt
 │   │       │                   │   │   └── TeacherHomeScreen.kt
 │   │       │                   │   └── viewmodel/
 │   │       │                   │       ├── HomeViewModel.kt
+│   │       │                   │       ├── MessageViewModel.kt
+│   │       │                   │       ├── ReportsViewModel.kt
 │   │       │                   │       ├── StudentViewModel.kt
+│   │       │                   │       ├── TaskEditViewModel.kt
 │   │       │                   │       ├── TaskViewModel.kt
 │   │       │                   │       └── TeacherSessionViewModel.kt
 │   │       │                   ├── util/
 │   │       │                   │   ├── ApiErrors.kt
+│   │       │                   │   ├── Jalali.kt
 │   │       │                   │   ├── NetworkMonitor.kt
-│   │       │                   │   └── Persian.kt
+│   │       │                   │   ├── Persian.kt
+│   │       │                   │   └── Share.kt
 │   │       │                   ├── MainActivity.kt
 │   │       │                   └── TeacherApp.kt
 │   │       ├── res/
 │   │       │   └── xml/
 │   │       │       └── file_paths.xml
 │   │       └── AndroidManifest.xml
+│   ├── README.md
 │   └── build.gradle.kts
 ├── CHANGELOG.md
 ├── CHANGES.txt
 ├── Luxurious Golden Arabic Calligraphy Emblem 512.png
+├── Luxurious Golden Arabic Calligraphy Emblem.png
 ├── README.md
 ├── build.gradle.kts
 ├── directory-tree.txt
-├── ghalam-for-claude.zip
 ├── gradle.properties
 └── settings.gradle.kts

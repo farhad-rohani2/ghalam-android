@@ -1,11 +1,15 @@
 package com.example.ghalam.teacher.data.api
 
 import kotlinx.serialization.json.JsonObject
+import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -63,4 +67,90 @@ interface TeacherApi {
         @Path("student") studentId: Long,
         @Body body: JsonObject,
     ): FeedbackResponse
+
+    // ---------------------------------------------------------------- task management (online only)
+
+    /** lesson_id, description (<= 500), optional classroom_id / deadline_at / expected_answer / dependencies / links. */
+    @POST("$V1/tasks")
+    suspend fun createTask(@Body body: JsonObject): TaskStoreResponse
+
+    /** Only the sent fields change; remove_media_ids deletes attached files. */
+    @PUT("$V1/tasks/{task}")
+    suspend fun updateTask(@Path("task") taskId: Long, @Body body: JsonObject): TaskStoreResponse
+
+    @DELETE("$V1/tasks/{task}")
+    suspend fun deleteTask(@Path("task") taskId: Long): OkResponse
+
+    /** Parts are named files[]. */
+    @Multipart
+    @POST("$V1/tasks/{task}/files")
+    suspend fun addTaskFiles(
+        @Path("task") taskId: Long,
+        @Part files: List<MultipartBody.Part>,
+    ): TaskDetailResponse
+
+    @DELETE("$V1/tasks/{task}/files/{media}")
+    suspend fun removeTaskFile(
+        @Path("task") taskId: Long,
+        @Path("media") mediaId: Long,
+    ): TaskDetailResponse
+
+    // ---------------------------------------------------------------- general feedback of a task
+
+    @GET("$V1/tasks/{task}/feedback/general")
+    suspend fun generalFeedback(@Path("task") taskId: Long): GeneralFeedbackResponse
+
+    /** Whole-state upsert; all three texts empty deletes it. */
+    @PUT("$V1/tasks/{task}/feedback/general")
+    suspend fun saveGeneralFeedback(
+        @Path("task") taskId: Long,
+        @Body body: JsonObject,
+    ): GeneralFeedbackResponse
+
+    // ---------------------------------------------------------------- reports (text composed by the server)
+
+    @GET("$V1/reports/today")
+    suspend fun reportToday(
+        @Query("mode") mode: String,
+        @Query("date") date: String? = null,
+        @Query("classroom_id") classroomId: Long? = null,
+    ): ReportResponse
+
+    @POST("$V1/reports/selected")
+    suspend fun reportSelected(@Body body: JsonObject): ReportResponse
+
+    @GET("$V1/tasks/{task}/report")
+    suspend fun reportTask(
+        @Path("task") taskId: Long,
+        @Query("mode") mode: String,
+    ): ReportResponse
+
+    // ---------------------------------------------------------------- messages to students
+
+    @GET("$V1/message-templates")
+    suspend fun templates(): TemplatesResponse
+
+    @POST("$V1/message-templates")
+    suspend fun createTemplate(@Body body: JsonObject): TemplatesResponse
+
+    @PUT("$V1/message-templates/{key}")
+    suspend fun updateTemplate(@Path("key") key: String, @Body body: JsonObject): TemplatesResponse
+
+    /** A custom template is deleted; an edited default one goes back to its default text. */
+    @DELETE("$V1/message-templates/{key}")
+    suspend fun deleteTemplate(@Path("key") key: String): TemplatesResponse
+
+    @GET("$V1/tasks/{task}/students/{student}/message-context")
+    suspend fun messageContext(
+        @Path("task") taskId: Long,
+        @Path("student") studentId: Long,
+    ): MessageContextResponse
+
+    /** template (key), optional body (override) and task_ids (<= 15). */
+    @POST("$V1/tasks/{task}/students/{student}/message")
+    suspend fun composeMessage(
+        @Path("task") taskId: Long,
+        @Path("student") studentId: Long,
+        @Body body: JsonObject,
+    ): ComposeResponse
 }

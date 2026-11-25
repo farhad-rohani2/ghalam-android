@@ -5,17 +5,21 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.ghalam.teacher.data.Graph
 import com.example.ghalam.teacher.data.api.TaskDetailDto
+import com.example.ghalam.teacher.data.local.GeneralFeedbackEntity
 import com.example.ghalam.teacher.data.local.SubmissionRow
 import com.example.ghalam.teacher.data.local.TaskEntity
 import com.example.ghalam.teacher.util.normalizeFa
+import com.example.ghalam.teacher.util.teacherMessage
 import java.text.Collator
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class TaskViewModel(val taskId: Long) : ViewModel() {
     private val repo = Graph.repo
@@ -45,6 +49,48 @@ class TaskViewModel(val taskId: Long) : ViewModel() {
                 (needle.isEmpty() || row.s.name.normalizeFa().contains(needle))
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The class-wide feedback of this task (null = none saved). */
+    val general: StateFlow<GeneralFeedbackEntity?> = repo.generalFeedback(taskId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun saveGeneral(positives: String, negatives: String, suggestions: String) {
+        viewModelScope.launch { repo.saveGeneralFeedback(taskId, positives, negatives, suggestions) }
+    }
+
+    fun retryGeneral() {
+        viewModelScope.launch { repo.retryGeneralFeedback(taskId) }
+    }
+
+    val deleting = MutableStateFlow(false)
+    val deleteError = MutableStateFlow<String?>(null)
+
+    /** Needs the server; on success everything of the task is removed from the phone too. */
+    fun deleteTask(onDone: () -> Unit) {
+        if (deleting.value) return
+        if (!Graph.network.online.value) {
+            deleteError.value = "برای حذف تکلیف باید به اینترنت وصل باشید."
+            return
+        }
+        viewModelScope.launch {
+            deleting.value = true
+            deleteError.value = null
+            try {
+                Graph.online.deleteTask(taskId)
+                onDone()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                deleteError.value = e.teacherMessage()
+            } finally {
+                deleting.value = false
+            }
+        }
+    }
+
+    fun clearDeleteError() {
+        deleteError.value = null
+    }
 
     val counts: StateFlow<Map<String, Int>> = all
         .map { rows -> rows.orEmpty().groupingBy { it.s.status }.eachCount() }

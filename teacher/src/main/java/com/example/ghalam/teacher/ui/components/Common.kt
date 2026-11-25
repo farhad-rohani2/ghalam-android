@@ -18,15 +18,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.ghalam.core.ui.components.Pill
+import com.example.ghalam.core.ui.components.SectionCard
 import com.example.ghalam.core.ui.theme.Danger
 import com.example.ghalam.core.ui.theme.DangerBg
 import com.example.ghalam.core.ui.theme.Primary
@@ -47,6 +58,8 @@ import com.example.ghalam.core.ui.theme.lessonTone
 import com.example.ghalam.teacher.data.Graph
 import com.example.ghalam.teacher.data.api.LevelDto
 import com.example.ghalam.teacher.data.local.FeedbackState
+import com.example.ghalam.teacher.util.copyText
+import com.example.ghalam.teacher.util.shareText
 
 /** Coloured, rounded header of every teacher screen. */
 @Composable
@@ -214,4 +227,69 @@ fun LevelSelector(
             }
         }
     }
+}
+
+
+/**
+ * Text field that keeps the text in local state while typing (a flow-backed value makes the cursor
+ * jump) and follows [value] when it changes from outside (a sync, a template switch ...).
+ */
+@Composable
+fun NoteField(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    minLines: Int = 2,
+    maxChars: Int = 2000,
+    singleLine: Boolean = false,
+    error: String? = null,
+    onChange: (String) -> Unit,
+) {
+    var local by remember { mutableStateOf(value) }
+    LaunchedEffect(value) { if (value != local) local = value }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        OutlinedTextField(
+            value = local,
+            onValueChange = {
+                val text = it.take(maxChars)
+                local = text
+                onChange(text)
+            },
+            label = { Text(label) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = if (singleLine) 1 else minLines,
+            singleLine = singleLine,
+            isError = error != null,
+            shape = MaterialTheme.shapes.medium,
+        )
+        if (error != null) {
+            Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 4.dp))
+        }
+    }
+}
+
+/** A ready-made text (report / message) with copy and share buttons. */
+@Composable
+fun ResultCard(text: String) {
+    val context = LocalContext.current
+    SectionCard(title = "متن آماده", emoji = "📋") {
+        SelectionContainer {
+            Text(text, style = MaterialTheme.typography.bodyLarge)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { copyText(context, text) }) { Text("کپی") }
+            OutlinedButton(onClick = { shareText(context, text) }) { Text("ارسال…") }
+        }
+    }
+}
+
+@Composable
+fun ErrorBanner(text: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(DangerBg)
+            .padding(12.dp),
+    ) { Text(text, color = Danger, style = MaterialTheme.typography.bodyMedium) }
 }

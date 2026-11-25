@@ -66,6 +66,8 @@ data class QuestionUi(
     val teacherFiles: List<RemoteFile>,
     /** teacher: links */
     val links: List<LinkItem>,
+    /** the student's own text answer (empty when none) */
+    val answerText: String = "",
 )
 
 data class DetailUi(
@@ -131,16 +133,18 @@ private fun JsonObject.toQuestionUi(): QuestionUi {
     val answerId = answer?.get("id").int()
 
     var slot: AnswerSlot? = null
+    var answerText = ""
     val files = mutableListOf<RemoteFile>()
     for (block in (answer?.get("answer") as? JsonArray).orEmpty()) {
-        val file = ((block as? JsonObject)?.get("data") as? JsonObject)?.get("file") as? JsonObject
-            ?: continue
+        val blockData = (block as? JsonObject)?.get("data") as? JsonObject
+        if (answerText.isEmpty()) answerText = blockData?.get("answer").str().orEmpty()
+        val file = blockData?.get("file") as? JsonObject ?: continue
         val fieldUuid = file["fieldUuid"].str() ?: continue
         if (slot == null && answerId != null) slot = AnswerSlot(answerId, fieldUuid)
         val media = ((file["extraData"] as? JsonObject)?.get("mediaResource") as? JsonArray).orEmpty()
         media.forEach { parseMedia(it)?.let(files::add) }
     }
-    return QuestionUi(get("id").int() ?: 0, slot, files, expected, teacherFiles, links)
+    return QuestionUi(get("id").int() ?: 0, slot, files, expected, teacherFiles, links, answerText)
 }
 
 /** Works for both mediaResource[] items and the upload response's "data". */

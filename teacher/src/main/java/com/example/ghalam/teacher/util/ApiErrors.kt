@@ -24,3 +24,21 @@ fun Throwable.teacherMessage(): String {
     }
     return userMessage()
 }
+
+/** A server error split into the overall message and the message of each invalid field (422). */
+data class ServerError(val message: String, val fields: Map<String, String> = emptyMap())
+
+/** Reads the error body once; for anything that is not an HTTP error only the plain message is known. */
+fun Throwable.toServerError(): ServerError {
+    if (this !is HttpException) return ServerError(userMessage())
+    if (code() == 429) return ServerError("درخواست‌های زیاد بود؛ کمی صبر کنید و دوباره امتحان کنید")
+    val body = runCatching { response()?.errorBody()?.string() }.getOrNull()
+    val obj = runCatching { ApiJson.parseToJsonElement(body.orEmpty()) as? JsonObject }.getOrNull()
+        ?: return ServerError(userMessage())
+    val message = (obj["message"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() } ?: userMessage()
+    val fields = (obj["errors"] as? JsonObject)?.mapNotNull { (key, value) ->
+        val first = (value as? kotlinx.serialization.json.JsonArray)?.firstOrNull() as? JsonPrimitive
+        first?.contentOrNull?.let { key to it }
+    }?.toMap().orEmpty()
+    return ServerError(message, fields)
+}

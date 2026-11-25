@@ -108,6 +108,20 @@ class SyncEngine(
                 }
             }
         }
+        for (entry in db.generalFeedbackDao().pending()) {
+            try {
+                val saved = api.saveGeneralFeedback(entry.taskId, repo.buildGeneralBody(entry)).data
+                repo.onGeneralUploaded(entry, saved, System.currentTimeMillis())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: HttpException) {
+                when (e.code()) {
+                    401 -> return Outcome.SIGNED_OUT
+                    403, 404, 422 -> repo.markGeneralError(entry, e.teacherMessage())
+                    else -> transient = true
+                }
+            }
+        }
         return if (transient) Outcome.RETRY else Outcome.OK
     }
 
@@ -160,7 +174,7 @@ class SyncEngine(
         // tasks that left the window (or were deleted on the server) go away, unless feedback for
         // them is still waiting to be uploaded
         val fetchedIds = fetched.map { it.id }.toSet()
-        val keep = db.feedbackDao().taskIdsWithUnsynced().toSet()
+        val keep = (db.feedbackDao().taskIdsWithUnsynced() + db.generalFeedbackDao().taskIdsWithUnsynced()).toSet()
         removeTasks(existing.keys.filter { it !in fetchedIds && it !in keep })
 
         status("دریافت پاسخ‌های دانش‌آموزان…")
@@ -201,6 +215,12 @@ class SyncEngine(
             val knownKeys = db.answerDao().keys(t.id).associate { it.studentId to it.answeredAtKey }
             coroutineScope {
                 rows.map { r -> async { syncStudent(t.id, r, knownKeys[r.id], full, now, gate) } }.awaitAll()
+            }
+
+            val generalLocal = db.generalFeedbackDao().get(t.id)
+            if (generalLocal == null || generalLocal.syncState == FeedbackState.SYNCED) {
+                val general = gate.withPermit { api.generalFeedback(t.id) }.data
+                repo.applyServerGeneral(t.id, general, now)
             }
             db.taskDao().markSubmissionsSynced(t.id, now)
         } catch (e: HttpException) {
@@ -249,6 +269,7 @@ class SyncEngine(
             db.answerDao().deleteForTasks(ids)
             db.submissionDao().deleteForTasks(ids)
             db.feedbackDao().deleteSyncedForTasks(ids)
+            db.generalFeedbackDao().deleteSyncedForTasks(ids)
             db.cacheDao().deleteKeys(ids.map { "task:$it" })
             db.taskDao().deleteByIds(ids)
         }

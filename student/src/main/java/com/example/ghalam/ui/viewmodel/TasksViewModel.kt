@@ -12,6 +12,7 @@ import com.example.ghalam.data.Graph
 import com.example.ghalam.data.model.Filter
 import com.example.ghalam.data.model.FilterKind
 import com.example.ghalam.data.model.Task
+import com.example.ghalam.data.outbox.Outbox
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -43,6 +44,12 @@ class TasksViewModel : ViewModel() {
 
     val token: StateFlow<String?> = Graph.token
     val loginState = MutableStateFlow(LoginState())
+
+    /** Answers (photos + texts) that are saved on the phone but not sent yet; used by the logout warning. */
+    val pendingTotal: StateFlow<Int> =
+        Graph.outbox.summary()
+            .map { list -> list.sumOf { it.total } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /** Filter definitions from filters-meta (only the types the app can render). */
     val filters = MutableStateFlow<List<Filter>>(emptyList())
@@ -143,6 +150,8 @@ class TasksViewModel : ViewModel() {
             loginState.value = LoginState(loading = true)
             try {
                 Graph.auth.login(Credentials.NationalCode(clean))
+                // unsent work of another student on this phone is removed here
+                Graph.outbox.onLogin(Outbox.ownerKey(clean))
                 loginState.value = LoginState()
                 loadFilters()
             } catch (e: CancellationException) {
@@ -160,12 +169,15 @@ class TasksViewModel : ViewModel() {
         val clean = raw.trim().removePrefix("Bearer").trim()
         if (clean.isBlank()) return
         Graph.setToken(clean)
+        viewModelScope.launch { Graph.outbox.onLogin("manual") }
         loadFilters()
     }
 
     fun logout() {
         viewModelScope.launch {
             Graph.auth.logout()
+            Graph.scheduler.cancelAll()
+            Graph.outbox.onLogout() // everything of this student leaves the phone
             filters.value = emptyList()
             selected.value = emptyMap()
             query.value = ""
