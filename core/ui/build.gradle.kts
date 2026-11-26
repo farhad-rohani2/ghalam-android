@@ -23,6 +23,7 @@ dependencies {
     api(platform("androidx.compose:compose-bom:2024.09.03"))
     api("androidx.compose.material3:material3")
     api("androidx.compose.ui:ui")
+    api("androidx.activity:activity-compose:1.9.2")
     api("io.coil-kt:coil-compose:2.7.0")
     api("com.squareup.okhttp3:okhttp:4.12.0")
 }
