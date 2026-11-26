@@ -72,7 +72,7 @@ class Outbox(
                         id = id,
                         taskUuid = taskUuid,
                         questionId = questionId,
-                        answerId = slot.answerId,
+                        answerId = slot.answerId ?: 0, // 0 = the answer record does not exist yet
                         fieldUuid = slot.fieldUuid,
                         fileName = "photo_${now}_${id.take(6)}.jpg",
                         localPath = file.absolutePath,
@@ -97,6 +97,51 @@ class Outbox(
                 throw e
             } catch (e: Exception) {
                 EnqueueResult.Error(e.message ?: "عکس خوانده نشد")
+            }
+        }
+
+    /** A voice answer: the recorded M4A is copied into the outbox and queued like a photo. */
+    suspend fun enqueueVoice(taskUuid: String, questionId: Int, slot: AnswerSlot, source: File): EnqueueResult =
+        withContext(Dispatchers.IO) {
+            try {
+                val size = source.length()
+                if (!source.exists() || size <= 0L) return@withContext EnqueueResult.Error("فایل صدا خالی است")
+                if (size > MAX_UPLOAD_BYTES) return@withContext EnqueueResult.TooLarge
+
+                val id = UUID.randomUUID().toString()
+                val file = File(OutboxFiles.outboxDir(appContext), "$id.m4a")
+                source.copyTo(file, overwrite = true)
+                source.delete()
+
+                val tooBigForAuto = prefs.limitAuto && size > prefs.limitAutoMb * MB
+                val hold = !prefs.autoUpload || tooBigForAuto
+                val now = System.currentTimeMillis()
+                dao.insertUpload(
+                    PendingUploadEntity(
+                        id = id,
+                        taskUuid = taskUuid,
+                        questionId = questionId,
+                        answerId = slot.answerId ?: 0, // 0 = the answer record does not exist yet
+                        fieldUuid = slot.fieldUuid,
+                        fileName = "voice_${now}_${id.take(6)}.m4a",
+                        localPath = file.absolutePath,
+                        sizeBytes = size,
+                        state = if (hold) UploadState.HELD else UploadState.PENDING,
+                        attempts = 0,
+                        nextAttemptAt = 0L,
+                        createdAt = now,
+                        maybeSent = false,
+                        lastError = null,
+                    ),
+                )
+                if (hold) EnqueueResult.Held else {
+                    kick()
+                    EnqueueResult.Queued
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                EnqueueResult.Error(e.message ?: "صدا ذخیره نشد")
             }
         }
 

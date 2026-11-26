@@ -217,16 +217,35 @@ class UploadEngine(
         }
     }
 
+    /**
+     * 0 = the student had no answer record when this was queued. An earlier upload (or a text) may have
+     * created it since: ask the server, so two files never create two answers.
+     */
+    private suspend fun resolveAnswerId(item: PendingUploadEntity): Int {
+        if (item.answerId > 0) return item.answerId
+        val detail = repo.fetchDetail(item.taskUuid).toUi()
+        val id = detail.questions.firstOrNull { it.id == item.questionId }?.slot?.answerId ?: 0
+        if (id > 0) dao.adoptAnswerId(item.taskUuid, item.questionId, id)
+        return id
+    }
+
     private suspend fun upload(item: PendingUploadEntity, file: File): RemoteFile {
-        val json = """{"extraData":{"morphedModel":"answer","modelId":${item.answerId}},"metadata":null}"""
+        val answerId = resolveAnswerId(item)
+        // no record yet: the server creates it from questionId (the same payload the site sends)
+        val extra = if (answerId > 0) "\"modelId\":$answerId" else "\"modelId\":null,\"questionId\":${item.questionId}"
+        val json = """{"extraData":{"morphedModel":"answer",$extra},"metadata":null}"""
         val res = api.upload(
-            file = MultipartBody.Part.createFormData("file", item.fileName, file.asRequestBody("image/jpeg".toMediaType())),
+            file = MultipartBody.Part.createFormData("file", item.fileName, file.asRequestBody(mimeOf(item.fileName).toMediaType())),
             fileName = item.fileName.toRequestBody(),
             fieldUuid = item.fieldUuid.toRequestBody(),
             json = json.toRequestBody(),
         )
         return parseMedia(res["data"]) ?: error("پاسخ ارسال نامعتبر بود")
     }
+
+    /** Photos are JPEG; voice answers are M4A (AAC). */
+    private fun mimeOf(fileName: String): String =
+        if (fileName.lowercase().endsWith(".m4a")) "audio/mp4" else "image/jpeg"
 
     /** The student keeps what was sent: the same compressed file is shown from the phone, never downloaded again. */
     private suspend fun keepLocalCopy(item: PendingUploadEntity, file: File, remote: RemoteFile) {
@@ -235,7 +254,8 @@ class UploadEngine(
             file.delete()
             return
         }
-        val dest = File(OutboxFiles.answersDir(appContext), "$uuid.jpg")
+        val ext = item.fileName.substringAfterLast('.', "jpg").lowercase()
+        val dest = File(OutboxFiles.answersDir(appContext), "$uuid.$ext")
         if (file.absolutePath != dest.absolutePath) {
             runCatching {
                 if (!file.renameTo(dest)) {

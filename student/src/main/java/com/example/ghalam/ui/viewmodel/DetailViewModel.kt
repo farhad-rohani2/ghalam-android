@@ -17,6 +17,7 @@ import com.example.ghalam.data.model.QuestionUi
 import com.example.ghalam.data.model.RemoteFile
 import com.example.ghalam.data.model.toUi
 import com.example.ghalam.data.outbox.EnqueueResult
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -192,6 +193,25 @@ class DetailViewModel(private val uuid: String) : ViewModel() {
                 held > 0 -> "عکس روی گوشی ذخیره شد؛ برای ارسال دکمهٔ «ارسال» را بزنید"
                 queued > 0 && !Graph.network.online.value -> "اینترنت ندارید؛ عکس ذخیره شد و با اتصال خودکار ارسال می‌شود"
                 else -> null
+            }
+            if (msg != null) _state.update { it.copy(message = msg) }
+        }
+    }
+
+    /** A recorded voice answer: saved on the phone and queued like a photo. */
+    fun uploadVoice(questionId: Int, file: File) {
+        val slot = _state.value.detail?.questions?.firstOrNull { it.id == questionId }?.slot
+        if (slot == null) {
+            _state.update { it.copy(message = "ارسال پاسخ برای این تکلیف ممکن نیست") }
+            return
+        }
+        viewModelScope.launch {
+            val msg = when (val r = Graph.outbox.enqueueVoice(uuid, questionId, slot, file)) {
+                EnqueueResult.Queued ->
+                    if (!Graph.network.online.value) "اینترنت ندارید؛ صدا ذخیره شد و با اتصال خودکار ارسال می‌شود" else null
+                EnqueueResult.Held -> "صدا روی گوشی ذخیره شد؛ برای ارسال دکمهٔ «ارسال» را بزنید"
+                EnqueueResult.TooLarge -> "حجم فایل بیش از ۶۰ مگابایت است و ارسال نمی‌شود"
+                is EnqueueResult.Error -> r.message
             }
             if (msg != null) _state.update { it.copy(message = msg) }
         }

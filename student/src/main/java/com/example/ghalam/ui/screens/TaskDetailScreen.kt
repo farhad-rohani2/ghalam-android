@@ -80,6 +80,8 @@ import com.example.ghalam.core.ui.theme.SuccessBg
 import com.example.ghalam.core.ui.theme.Warn
 import com.example.ghalam.core.ui.theme.WarnBg
 import com.example.ghalam.core.ui.theme.lessonTone
+import com.example.ghalam.core.ui.voice.VoiceIcons
+import com.example.ghalam.core.ui.voice.VoiceRecorderSheet
 import com.example.ghalam.data.model.DepItem
 import com.example.ghalam.data.model.DetailUi
 import com.example.ghalam.data.model.LinkItem
@@ -119,6 +121,7 @@ fun TaskDetailScreen(
     var targetQuestion by rememberSaveable { mutableIntStateOf(0) }
     var cameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var toDelete by remember { mutableStateOf<Pair<Int, RemoteFile>?>(null) }
+    var recordFor by remember { mutableStateOf<Int?>(null) }
 
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
         if (uris.isNotEmpty()) vm.upload(targetQuestion, uris)
@@ -237,6 +240,7 @@ fun TaskDetailScreen(
                                     onDelete = { f -> toDelete = q.id to f },
                                     onCamera = { takePhoto(q.id) },
                                     onGallery = { pickFromGallery(q.id) },
+                                    onVoice = { recordFor = q.id },
                                     onTextChange = { t -> vm.onTextChange(q.id, t) },
                                     onRetryText = { vm.retryText(q.id) },
                                     onRetryUpload = vm::retryUpload,
@@ -255,10 +259,21 @@ fun TaskDetailScreen(
     toDelete?.let { (qid, file) ->
         AlertDialog(
             onDismissRequest = { toDelete = null },
-            title = { Text("حذف عکس") },
-            text = { Text("این عکس از پاسخ شما حذف شود؟") },
+            title = { Text("حذف فایل") },
+            text = { Text("این فایل از پاسخ شما حذف شود؟") },
             confirmButton = { TextButton(onClick = { vm.delete(qid, file); toDelete = null }) { Text("حذف", color = Danger) } },
             dismissButton = { TextButton(onClick = { toDelete = null }) { Text("انصراف") } },
+        )
+    }
+
+    recordFor?.let { qid ->
+        VoiceRecorderSheet(
+            title = "پاسخ صوتی",
+            onDismiss = { recordFor = null },
+            onRecorded = { clip ->
+                vm.uploadVoice(qid, clip.file)
+                recordFor = null
+            },
         )
     }
 
@@ -403,6 +418,7 @@ private fun AnswerSection(
     onDelete: (RemoteFile) -> Unit,
     onCamera: () -> Unit,
     onGallery: () -> Unit,
+    onVoice: () -> Unit,
     onTextChange: (String) -> Unit,
     onRetryText: () -> Unit,
     onRetryUpload: (PendingUploadEntity) -> Unit,
@@ -428,7 +444,7 @@ private fun AnswerSection(
             MediaGrid(q.files, deleting, onOpen = onOpen, onDelete = onDelete)
             if (q.files.isEmpty() && pending.isEmpty()) {
                 Text(
-                    "از برگه‌ی تکلیف خود عکس بگیرید و بفرستید.",
+                    "از برگه‌ی تکلیف خود عکس بگیرید یا پاسخ صوتی ضبط کنید.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -454,6 +470,15 @@ private fun AnswerSection(
                     primary = false,
                     enabled = true,
                     onClick = onGallery,
+                    modifier = Modifier.weight(1f),
+                )
+                AnswerActionTile(
+                    icon = VoiceIcons.Mic,
+                    title = "صدا",
+                    hint = "پاسخ صوتی",
+                    primary = false,
+                    enabled = true,
+                    onClick = onVoice,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -491,12 +516,19 @@ private fun PendingUploadRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = File(item.localPath),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)),
-        )
+        if (item.localPath.endsWith(".m4a")) {
+            Box(
+                Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)).background(Primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) { Icon(VoiceIcons.Mic, null, tint = Primary, modifier = Modifier.size(28.dp)) }
+        } else {
+            AsyncImage(
+                model = File(item.localPath),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)),
+            )
+        }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Pill(label, bg, fg)
             if (item.state == UploadState.FAILED && !item.lastError.isNullOrBlank()) {

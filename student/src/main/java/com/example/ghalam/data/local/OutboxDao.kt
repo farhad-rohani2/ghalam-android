@@ -36,6 +36,10 @@ interface OutboxDao {
     @Query("UPDATE pending_uploads SET state = 'PENDING' WHERE state = 'UPLOADING'")
     suspend fun resetUploading()
 
+    /** The answer record was created by an earlier upload: the others of the question join it. */
+    @Query("UPDATE pending_uploads SET answerId = :answerId WHERE taskUuid = :taskUuid AND questionId = :questionId AND answerId = 0")
+    suspend fun adoptAnswerId(taskUuid: String, questionId: Int, answerId: Int)
+
     @Query("UPDATE pending_uploads SET maybeSent = 1 WHERE id = :id")
     suspend fun markMaybeSent(id: String)
 

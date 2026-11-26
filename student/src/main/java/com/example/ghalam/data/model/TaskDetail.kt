@@ -52,8 +52,12 @@ data class LinkItem(val title: String, val url: String)
 /** A prerequisite task. */
 data class DepItem(val title: String, val uuid: String?)
 
-/** What is needed to upload into a question's answer. */
-data class AnswerSlot(val answerId: Int, val fieldUuid: String)
+/**
+ * What is needed to upload into a question's answer.
+ * [answerId] is null while the student has no answer record yet: the site creates it with the first
+ * upload (modelId = null + questionId), exactly like its own page does.
+ */
+data class AnswerSlot(val answerId: Int?, val fieldUuid: String, val questionId: Int)
 
 data class QuestionUi(
     val id: Int,
@@ -130,7 +134,8 @@ private fun JsonObject.toQuestionUi(): QuestionUi {
 
     // ----- student part: answer -----
     val answer = get("answer") as? JsonObject // may be [] / null when there is no answer record
-    val answerId = answer?.get("id").int()
+    val answerId = answer?.get("id").int() // null until the student has sent something
+    val questionId = get("id").int() ?: 0
 
     var slot: AnswerSlot? = null
     var answerText = ""
@@ -140,11 +145,11 @@ private fun JsonObject.toQuestionUi(): QuestionUi {
         if (answerText.isEmpty()) answerText = blockData?.get("answer").str().orEmpty()
         val file = blockData?.get("file") as? JsonObject ?: continue
         val fieldUuid = file["fieldUuid"].str() ?: continue
-        if (slot == null && answerId != null) slot = AnswerSlot(answerId, fieldUuid)
+        if (slot == null) slot = AnswerSlot(answerId, fieldUuid, questionId)
         val media = ((file["extraData"] as? JsonObject)?.get("mediaResource") as? JsonArray).orEmpty()
         media.forEach { parseMedia(it)?.let(files::add) }
     }
-    return QuestionUi(get("id").int() ?: 0, slot, files, expected, teacherFiles, links, answerText)
+    return QuestionUi(questionId, slot, files, expected, teacherFiles, links, answerText)
 }
 
 /** Works for both mediaResource[] items and the upload response's "data". */
