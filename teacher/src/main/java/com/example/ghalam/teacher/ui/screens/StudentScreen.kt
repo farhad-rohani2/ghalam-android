@@ -55,6 +55,7 @@ import com.example.ghalam.core.ui.theme.SuccessBg
 import com.example.ghalam.core.ui.theme.Warn
 import com.example.ghalam.core.ui.theme.WarnBg
 import com.example.ghalam.teacher.data.Graph
+import com.example.ghalam.teacher.ui.components.FeedbackVoiceSection
 import com.example.ghalam.teacher.data.api.AnswerFileDto
 import com.example.ghalam.teacher.data.api.FeedbackRowDto
 import com.example.ghalam.teacher.data.local.FeedbackState
@@ -227,6 +228,8 @@ fun StudentScreen(
                     }
                 }
             }
+
+            item(key = "voice") { FeedbackVoiceSection(taskId = vm.taskId, holder = vm.voice, onOpenViewer = onOpenViewer) }
         }
 
         // ---------------------------------------------------------------- bottom bar
@@ -364,8 +367,8 @@ private fun AnswerFileItem(file: AnswerFileDto, vm: StudentViewModel, onOpenView
 
     fun open() {
         if (local == null) return
-        // images and PDFs open inside the app; everything else in another app
-        if (kind == MediaKind.IMAGE || kind == MediaKind.PDF) {
+        // images, PDFs and voice open inside the app; everything else in another app
+        if (kind == MediaKind.IMAGE || kind == MediaKind.PDF || kind == MediaKind.AUDIO) {
             onOpenViewer(Graph.media.keyOf(url))
         } else if (!Graph.media.openExternally(context, local, mime)) {
             Toast.makeText(context, "برنامه‌ای برای باز کردن این فایل پیدا نشد", Toast.LENGTH_SHORT).show()

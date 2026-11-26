@@ -3,6 +3,7 @@ package com.example.ghalam.teacher.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.ghalam.teacher.data.repository.GENERAL_FEEDBACK
 import com.example.ghalam.teacher.data.Graph
 import com.example.ghalam.teacher.data.api.TaskDetailDto
 import com.example.ghalam.teacher.data.local.GeneralFeedbackEntity
@@ -53,6 +54,15 @@ class TaskViewModel(val taskId: Long) : ViewModel() {
     /** The class-wide feedback of this task (null = none saved). */
     val general: StateFlow<GeneralFeedbackEntity?> = repo.generalFeedback(taskId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Voice / files of the class-wide feedback (recordings are queued offline). */
+    val generalVoice = FeedbackMediaHolder(
+        scope = viewModelScope,
+        taskId = taskId,
+        studentId = GENERAL_FEEDBACK,
+        load = { Graph.online.generalFeedbackMedia(taskId) },
+        delete = { Graph.online.removeGeneralFeedbackMedia(taskId, it) },
+    ).also { it.refresh() }
 
     fun saveGeneral(positives: String, negatives: String, suggestions: String) {
         viewModelScope.launch { repo.saveGeneralFeedback(taskId, positives, negatives, suggestions) }

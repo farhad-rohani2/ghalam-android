@@ -62,7 +62,17 @@ class StudentViewModel(val taskId: Long, val studentId: Long) : ViewModel() {
     /** url -> why the last manual download failed. */
     val fileErrors: StateFlow<Map<String, String>> = _fileErrors.asStateFlow()
 
+    /** Voice / files of this student's feedback (recordings are queued offline). */
+    val voice = FeedbackMediaHolder(
+        scope = viewModelScope,
+        taskId = taskId,
+        studentId = studentId,
+        load = { Graph.online.studentFeedbackMedia(taskId, studentId) },
+        delete = { Graph.online.removeStudentFeedbackMedia(taskId, studentId, it) },
+    )
+
     init {
+        voice.refresh()
         viewModelScope.launch {
             repo.feedbackScreen(taskId, studentId).collect { s ->
                 val previouslySaved = _screen.value?.form

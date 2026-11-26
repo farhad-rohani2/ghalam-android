@@ -68,6 +68,39 @@ interface TeacherApi {
         @Body body: JsonObject,
     ): FeedbackResponse
 
+    /**
+     * Parts: collection ("voice" | "files"), optional duration (seconds) and files[].
+     * Returns the whole feedback of the student (with its media list).
+     */
+    @Multipart
+    @POST("$V1/tasks/{task}/students/{student}/feedback/media")
+    suspend fun addFeedbackMedia(
+        @Path("task") taskId: Long,
+        @Path("student") studentId: Long,
+        @Part parts: List<MultipartBody.Part>,
+    ): FeedbackResponse
+
+    @DELETE("$V1/tasks/{task}/students/{student}/feedback/media/{media}")
+    suspend fun removeFeedbackMedia(
+        @Path("task") taskId: Long,
+        @Path("student") studentId: Long,
+        @Path("media") mediaId: Long,
+    ): FeedbackResponse
+
+    /** Same as [addFeedbackMedia] for the class-wide feedback of the task. */
+    @Multipart
+    @POST("$V1/tasks/{task}/feedback/general/media")
+    suspend fun addGeneralFeedbackMedia(
+        @Path("task") taskId: Long,
+        @Part parts: List<MultipartBody.Part>,
+    ): GeneralFeedbackResponse
+
+    @DELETE("$V1/tasks/{task}/feedback/general/media/{media}")
+    suspend fun removeGeneralFeedbackMedia(
+        @Path("task") taskId: Long,
+        @Path("media") mediaId: Long,
+    ): GeneralFeedbackResponse
+
     // ---------------------------------------------------------------- task management (online only)
 
     /** lesson_id, description (<= 500), optional classroom_id / deadline_at / expected_answer / dependencies / links. */

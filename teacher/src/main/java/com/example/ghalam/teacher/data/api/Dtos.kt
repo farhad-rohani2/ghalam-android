@@ -198,11 +198,28 @@ data class FeedbackRowDto(
     val level: Int? = null,
 )
 
+/** A file attached to a feedback; collection = "voice" (a recording) or "files". */
+@Serializable
+data class FeedbackMediaDto(
+    val id: Long = 0,
+    val uuid: String = "",
+    val collection: String = "files",
+    val name: String = "",
+    val mime: String = "",
+    val size: Long = 0,
+    val url: String = "",
+    /** seconds, null when unknown */
+    val duration: Double? = null,
+    @SerialName("uploaded_by") val uploadedBy: Long? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+)
+
 @Serializable
 data class GeneralFeedbackDto(
     val positives: String = "",
     val negatives: String = "",
     val suggestions: String = "",
+    val media: List<FeedbackMediaDto> = emptyList(),
 )
 
 @Serializable
@@ -215,6 +232,7 @@ data class FeedbackDto(
     val positives: String = "",
     val negatives: String = "",
     val suggestions: String = "",
+    val media: List<FeedbackMediaDto> = emptyList(),
     @SerialName("updated_at") val updatedAt: String? = null,
     val levels: List<LevelDto> = emptyList(),
     val general: GeneralFeedbackDto = GeneralFeedbackDto(),

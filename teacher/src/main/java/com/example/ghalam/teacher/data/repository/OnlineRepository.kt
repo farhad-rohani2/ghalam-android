@@ -3,6 +3,7 @@ package com.example.ghalam.teacher.data.repository
 import android.content.ContentResolver
 import android.net.Uri
 import com.example.ghalam.teacher.data.api.ComposeResponse
+import com.example.ghalam.teacher.data.api.FeedbackMediaDto
 import com.example.ghalam.teacher.data.api.MessageContextDto
 import com.example.ghalam.teacher.data.api.MessageTemplateDto
 import com.example.ghalam.teacher.data.api.TaskDetailDto
@@ -88,6 +89,30 @@ class OnlineRepository(
         api.deleteTask(taskId)
         repo.removeTaskLocal(taskId)
         media.deleteForTasks(listOf(taskId))
+    }
+
+    // ---------------------------------------------------------------- feedback voice (online only)
+
+    /** The feedback media of one student, from the server. */
+    suspend fun studentFeedbackMedia(taskId: Long, studentId: Long): List<FeedbackMediaDto> =
+        api.feedback(taskId, studentId).data.media
+
+    suspend fun removeStudentFeedbackMedia(taskId: Long, studentId: Long, mediaId: Long): List<FeedbackMediaDto> {
+        val dto = api.removeFeedbackMedia(taskId, studentId, mediaId).data
+        syncAfterMedia(taskId, studentId, dto)
+        return dto.media
+    }
+
+    suspend fun generalFeedbackMedia(taskId: Long): List<FeedbackMediaDto> =
+        api.generalFeedback(taskId).data.media
+
+    suspend fun removeGeneralFeedbackMedia(taskId: Long, mediaId: Long): List<FeedbackMediaDto> =
+        api.removeGeneralFeedbackMedia(taskId, mediaId).data.media
+
+    /** The upload created / changed the feedback row on the server: Room follows (see advanceFeedbackBase). */
+    private suspend fun syncAfterMedia(taskId: Long, studentId: Long, dto: com.example.ghalam.teacher.data.api.FeedbackDto) {
+        repo.applyServerFeedback(taskId, studentId, dto, System.currentTimeMillis())
+        repo.advanceFeedbackBase(taskId, studentId, if (dto.exists) dto.updatedAt else null)
     }
 
     // ---------------------------------------------------------------- reports

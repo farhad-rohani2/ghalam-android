@@ -9,8 +9,10 @@ import com.example.ghalam.core.network.data.repository.AuthRepository
 import com.example.ghalam.core.ui.util.createAuthImageLoader
 import com.example.ghalam.teacher.data.api.TeacherApi
 import com.example.ghalam.teacher.data.local.MIGRATION_1_2
+import com.example.ghalam.teacher.data.local.MIGRATION_2_3
 import com.example.ghalam.teacher.data.local.TeacherDatabase
 import com.example.ghalam.teacher.data.media.TeacherMedia
+import com.example.ghalam.teacher.data.repository.FeedbackMediaQueue
 import com.example.ghalam.teacher.data.repository.OnlineRepository
 import com.example.ghalam.teacher.data.repository.TeacherAuthService
 import com.example.ghalam.teacher.data.repository.TeacherRepository
@@ -55,6 +57,8 @@ object Graph {
         private set
     lateinit var online: OnlineRepository
         private set
+    lateinit var mediaQueue: FeedbackMediaQueue
+        private set
     lateinit var sync: SyncEngine
         private set
     lateinit var imageLoader: ImageLoader
@@ -68,7 +72,7 @@ object Graph {
         appContext = context.applicationContext
 
         db = Room.databaseBuilder(appContext, TeacherDatabase::class.java, DB_NAME)
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
         prefs = SyncPrefs(appContext)
         network = NetworkMonitor(appContext)
@@ -82,6 +86,7 @@ object Graph {
         api = apiClient.create(TeacherApi::class.java)
         media = TeacherMedia(appContext, apiClient.client, db.mediaDao())
         repo = TeacherRepository(db, apiClient.json) { scheduler.enqueueUpload() }
+        mediaQueue = FeedbackMediaQueue(db.mediaQueueDao(), appContext) { scheduler.enqueueUpload() }
         online = OnlineRepository(api, db, repo, media, appContext.contentResolver)
         sync = SyncEngine(api, db, repo, media, prefs, network, apiClient.json)
         imageLoader = createAuthImageLoader(appContext, apiClient.client)
@@ -107,7 +112,10 @@ object Graph {
     private suspend fun wipeData() {
         scheduler.cancelAll()
         media.clearAll()
-        withContext(Dispatchers.IO) { db.clearAllTables() }
+        withContext(Dispatchers.IO) {
+            db.clearAllTables()
+            mediaQueue.deleteFiles()
+        }
         SyncStatus.reset()
     }
 }

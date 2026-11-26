@@ -16,9 +16,13 @@ import com.example.ghalam.teacher.data.local.JsonCacheEntity
 import com.example.ghalam.teacher.data.local.TeacherDatabase
 import com.example.ghalam.teacher.data.local.toEntity
 import com.example.ghalam.teacher.data.media.TeacherMedia
+import com.example.ghalam.teacher.data.local.MediaQueueState
+import com.example.ghalam.teacher.data.repository.GENERAL_FEEDBACK
 import com.example.ghalam.teacher.data.repository.TeacherRepository
+import com.example.ghalam.teacher.data.repository.feedbackMediaParts
 import com.example.ghalam.teacher.util.NetworkMonitor
 import com.example.ghalam.teacher.util.teacherMessage
+import java.io.File
 import java.io.IOException
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
@@ -118,6 +122,35 @@ class SyncEngine(
                 when (e.code()) {
                     401 -> return Outcome.SIGNED_OUT
                     403, 404, 422 -> repo.markGeneralError(entry, e.teacherMessage())
+                    else -> transient = true
+                }
+            }
+        }
+        // recordings of feedbacks (after the texts, so the stamps they change are already known)
+        val queue = db.mediaQueueDao()
+        for (item in queue.pending()) {
+            val file = File(item.localPath)
+            if (!file.exists()) {
+                queue.delete(item.id)
+                continue
+            }
+            try {
+                val parts = feedbackMediaParts(file, item.fileName, item.durationMs, item.mime)
+                if (item.studentId == GENERAL_FEEDBACK) {
+                    api.addGeneralFeedbackMedia(item.taskId, parts)
+                } else {
+                    val dto = api.addFeedbackMedia(item.taskId, item.studentId, parts).data
+                    repo.applyServerFeedback(item.taskId, item.studentId, dto, System.currentTimeMillis())
+                    repo.advanceFeedbackBase(item.taskId, item.studentId, if (dto.exists) dto.updatedAt else null)
+                }
+                file.delete()
+                queue.delete(item.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: HttpException) {
+                when (e.code()) {
+                    401 -> return Outcome.SIGNED_OUT
+                    403, 404, 405, 413, 422 -> queue.setState(item.id, MediaQueueState.ERROR, e.teacherMessage())
                     else -> transient = true
                 }
             }

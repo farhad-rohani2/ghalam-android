@@ -221,6 +221,19 @@ class TeacherRepository(
         }
     }
 
+    /**
+     * A voice upload changes the server's updated_at by itself. A copy that still waits for its upload
+     * is based on the new stamp, otherwise its next upload would look like a conflict.
+     */
+    suspend fun advanceFeedbackBase(taskId: Long, studentId: Long, stamp: String?) {
+        db.withTransaction {
+            val cur = db.feedbackDao().get(taskId, studentId) ?: return@withTransaction
+            if (cur.syncState == FeedbackState.PENDING || cur.syncState == FeedbackState.ERROR) {
+                db.feedbackDao().upsert(cur.copy(baseUpdatedAt = stamp))
+            }
+        }
+    }
+
     suspend fun markConflict(sent: FeedbackEntity, server: FeedbackDto) {
         db.withTransaction {
             val cur = db.feedbackDao().get(sent.taskId, sent.studentId) ?: return@withTransaction

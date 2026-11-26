@@ -43,6 +43,7 @@ import com.example.ghalam.core.ui.components.OfflineBanner
 import com.example.ghalam.core.ui.components.SectionCard
 import com.example.ghalam.core.ui.components.SkeletonCard
 import com.example.ghalam.teacher.data.Graph
+import com.example.ghalam.teacher.ui.components.FeedbackVoiceSection
 import com.example.ghalam.teacher.data.local.FeedbackState
 import com.example.ghalam.teacher.data.local.GeneralFeedbackEntity
 import com.example.ghalam.teacher.data.local.SubmissionRow
@@ -148,6 +149,10 @@ fun TaskScreen(
                     onSave = vm::saveGeneral,
                     onRetry = vm::retryGeneral,
                 )
+            }
+
+            item(key = "generalVoice") {
+                FeedbackVoiceSection(taskId = vm.taskId, holder = vm.generalVoice, title = "بازخورد صوتی کلاس")
             }
 
             item(key = "filters") {
