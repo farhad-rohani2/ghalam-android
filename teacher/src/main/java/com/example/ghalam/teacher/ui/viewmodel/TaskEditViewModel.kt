@@ -6,6 +6,8 @@ import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.ghalam.core.ui.voice.VoiceClip
+import com.example.ghalam.core.ui.voice.VoiceConfig
 import com.example.ghalam.teacher.data.Graph
 import com.example.ghalam.teacher.data.api.LessonDto
 import com.example.ghalam.teacher.data.api.TaskFileDto
@@ -162,6 +164,18 @@ class TaskEditViewModel(val taskId: Long) : ViewModel() {
     fun addFiles(resolver: ContentResolver, uris: List<Uri>) {
         val picked = uris.map { uri -> describe(resolver, uri) }
         _form.update { f -> f.copy(newFiles = f.newFiles + picked.filter { p -> f.newFiles.none { it.uri == p.uri } }) }
+    }
+
+    /** A recorded voice note becomes a normal attachment of the task (sent with the other files on save). */
+    fun addVoice(clip: VoiceClip) {
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+        val picked = PickedFile(
+            uri = Uri.fromFile(clip.file),
+            name = "voice_$stamp.${VoiceConfig.EXTENSION}",
+            size = clip.file.length(),
+            mime = VoiceConfig.MIME,
+        )
+        _form.update { f -> f.copy(newFiles = f.newFiles + picked) }
     }
 
     fun removeNewFile(index: Int) {

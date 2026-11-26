@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import com.example.ghalam.core.ui.voice.VoiceRecorderSheet
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -82,6 +83,7 @@ fun TaskEditScreen(
     val result by vm.result.collectAsState()
     val online by Graph.network.online.collectAsState()
     var showPicker by remember { mutableStateOf(false) }
+    var showRecorder by remember { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         vm.addFiles(context.contentResolver, uris)
@@ -261,7 +263,10 @@ fun TaskEditScreen(
                             TextButton(onClick = { vm.removeNewFile(i) }) { Text("✖") }
                         }
                     }
-                    TextButton(onClick = { filePicker.launch("*/*") }) { Text("＋ افزودن فایل") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { filePicker.launch("*/*") }) { Text("＋ افزودن فایل") }
+                        TextButton(onClick = { showRecorder = true }) { Text("🎙 ضبط صدا") }
+                    }
                     errors["files"]?.let { FieldError(it) }
                 }
             }
@@ -277,6 +282,17 @@ fun TaskEditScreen(
                 else Text(if (vm.isNew) "ساخت تکلیف" else "ذخیره‌ی تغییرات", fontWeight = FontWeight.Bold)
             }
         }
+    }
+
+    if (showRecorder) {
+        VoiceRecorderSheet(
+            title = "توضیح صوتی تکلیف",
+            onDismiss = { showRecorder = false },
+            onRecorded = { clip ->
+                vm.addVoice(clip)
+                showRecorder = false
+            },
+        )
     }
 
     if (showPicker) {

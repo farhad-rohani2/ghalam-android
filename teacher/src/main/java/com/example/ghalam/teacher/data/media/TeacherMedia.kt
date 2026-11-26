@@ -108,7 +108,11 @@ class TeacherMedia(
                     }
                     if (written == 0L) throw IOException("فایل خالی است")
 
-                    val sniffed = MediaKinds.sniff(tmp)
+                    val rawSniff = MediaKinds.sniff(tmp)
+                    // a voice recording (M4A) has the same header as an MP4 video: the file name decides
+                    val sniffed = if (rawSniff?.kind == MediaKind.VIDEO &&
+                        MediaKinds.extensionOf(name) in setOf("m4a", "aac")
+                    ) Sniffed(MediaKind.AUDIO, "audio/mp4", "m4a") else rawSniff
                     val headerMime = body.contentType()?.let { "${it.type}/${it.subtype}".lowercase() }
                         ?.takeIf { it != "application/octet-stream" && it != "binary/octet-stream" }
                     val ext = sniffed?.ext ?: MediaKinds.extensionOf(name) ?: "bin"

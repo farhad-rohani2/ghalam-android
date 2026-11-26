@@ -44,6 +44,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.ghalam.core.ui.voice.VoicePlayerBar
 import com.example.ghalam.teacher.data.Graph
 import com.example.ghalam.teacher.data.local.MediaEntity
 import com.example.ghalam.teacher.data.media.MediaKind
@@ -88,6 +89,9 @@ fun FileViewerScreen(fileKey: String, onBack: () -> Unit) {
                 file == null -> Message("این فایل روی گوشی نیست؛ از صفحه‌ی پاسخ دانلودش کنید.")
                 kind == MediaKind.IMAGE -> ZoomableImage(file)
                 kind == MediaKind.PDF -> PdfPages(file, context)
+                kind == MediaKind.AUDIO -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                    VoicePlayerBar(file)
+                }
                 else -> Message("این نوع فایل داخل برنامه نمایش داده نمی‌شود؛ با دکمه‌ی ↗ در برنامه‌ی دیگری باز کنید.")
             }
         }

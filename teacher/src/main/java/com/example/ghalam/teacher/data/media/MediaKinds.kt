@@ -55,6 +55,9 @@ object MediaKinds {
         "pdf" -> "application/pdf"
         "mp4", "m4v" -> "video/mp4"
         "mp3" -> "audio/mpeg"
+        "m4a", "aac" -> "audio/mp4"
+        "wav" -> "audio/wav"
+        "ogg", "oga", "opus" -> "audio/ogg"
         else -> null
     }
 
